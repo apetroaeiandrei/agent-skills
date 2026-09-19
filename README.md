@@ -254,7 +254,7 @@ The commands above are entry points. The pack includes 25 skills total — 24 li
 | [source-driven-development](skills/source-driven-development/SKILL.md) | Ground every framework decision in official documentation - verify, cite sources, flag what's unverified | You want authoritative, source-cited code for any framework or library |
 | [doubt-driven-development](skills/doubt-driven-development/SKILL.md) | Adversarial fresh-context review of every non-trivial decision in-flight - CLAIM → EXTRACT → DOUBT → RECONCILE → STOP, with optional user-authorized cross-model escalation | Stakes are high (production, security, irreversible), working in unfamiliar code, or a confident output is cheaper to verify now than to debug later |
 | [flutter-ui-engineering](skills/flutter-ui-engineering/SKILL.md) | Widget architecture, theming and design systems, Bloc/Cubit state, navigation, adaptive layout, WCAG 2.1 AA and platform accessibility | Building or modifying user-facing interfaces |
-| [api-and-interface-design](skills/api-and-interface-design/SKILL.md) | Contract-first design, Hyrum's Law, One-Version Rule, error semantics, boundary validation | Designing APIs, module boundaries, or public interfaces |
+| [api-and-interface-design](skills/api-and-interface-design/SKILL.md) | Contract-first design, Hyrum's Law, One-Version Rule, error semantics, boundary validation, mobile-client compatibility, Dart interface patterns | Designing APIs, app-to-backend contracts, module boundaries, or public interfaces |
 
 ### Verify - Prove it works
 
