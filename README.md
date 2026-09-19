@@ -280,7 +280,7 @@ The commands above are entry points. The pack includes 25 skills total — 24 li
 | [ci-cd-and-automation](skills/ci-cd-and-automation/SKILL.md) | Shift Left, Faster is Safer, Flutter quality gates, signing and store releases, feature flags and staged rollouts, failure feedback loops | Setting up or modifying build, signing, and release pipelines |
 | [deprecation-and-migration](skills/deprecation-and-migration/SKILL.md) | Code-as-liability mindset, compulsory vs advisory deprecation, migration patterns, zombie code removal | Removing old systems, migrating users, or sunsetting features |
 | [documentation-and-adrs](skills/documentation-and-adrs/SKILL.md) | Architecture Decision Records, API docs, inline documentation standards - document the *why* | Making architectural decisions, changing APIs, or shipping features |
-| [observability-and-instrumentation](skills/observability-and-instrumentation/SKILL.md) | Structured logging, RED metrics, OpenTelemetry tracing, symptom-based alerting - instrument as you build | Adding telemetry, or shipping anything that runs in production |
+| [observability-and-instrumentation](skills/observability-and-instrumentation/SKILL.md) | Structured logging and app-version tagging, crash/ANR reporting with symbols, consent-aware offline-safe analytics, RED metrics, tracing, symptom-based alerting - instrument as you build | Adding telemetry, or shipping anything that runs on users' devices |
 | [shipping-and-launch](skills/shipping-and-launch/SKILL.md) | Pre-launch and store-readiness checklists, feature flags and kill switches, staged/phased rollouts, recovery plans for apps that can't be recalled, crash monitoring | Preparing an app release for the App Store or Google Play |
 
 ---
@@ -311,7 +311,7 @@ Quick-reference material that skills pull in when needed:
 | [security-checklist.md](references/security-checklist.md) | Pre-commit checks, auth, input validation, headers, CORS, OWASP Top 10 |
 | [performance-checklist.md](references/performance-checklist.md) | Core Web Vitals targets, frontend/backend checklists, measurement commands |
 | [accessibility-checklist.md](references/accessibility-checklist.md) | Keyboard nav, screen readers, visual design, ARIA, testing tools |
-| [observability-checklist.md](references/observability-checklist.md) | On-call questions, structured logging, RED/USE metrics, tracing, symptom-based alerting, pre-launch gate |
+| [observability-checklist.md](references/observability-checklist.md) | On-call questions, structured logging, mobile app telemetry, RED/USE metrics, tracing, symptom-based alerting, pre-launch gate |
 | [orchestration-patterns.md](references/orchestration-patterns.md) | Endorsed multi-persona orchestration patterns, anti-patterns, and the "personas don't invoke personas" rule |
 
 ---

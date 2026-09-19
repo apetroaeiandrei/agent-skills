@@ -3,15 +3,15 @@
   "trigger": {
     "positive": [
       {
-        "prompt": "Add structured logging and metrics to the checkout service",
+        "prompt": "Add structured logging and crash reporting to the checkout flow in the app",
         "top_k": 3
       },
       {
-        "prompt": "Set up tracing so we can follow a request across services",
+        "prompt": "Set up tracing so we can follow a request from the app across services",
         "top_k": 3
       },
       {
-        "prompt": "What alerts should we page on for this new endpoint?",
+        "prompt": "What alerts should we page on for the new app release?",
         "top_k": 3
       }
     ],
@@ -28,16 +28,17 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Instrument a new payment-retry feature so on-call can operate it.",
-      "expected_output": "On-call questions defined first, then structured logs, RED metrics, and symptom-based alerts that answer them",
+      "prompt": "Instrument the new payment-retry feature in the app so on-call can operate it.",
+      "expected_output": "On-call questions defined first, then structured events with app-version tagging, crash and error reporting, and symptom-based alerts that answer them",
       "files": [
         "observability-and-instrumentation"
       ],
       "expectations": [
         "On-call questions are written before instrumentation is added",
-        "Logs are structured events with a correlation id, not prose strings",
-        "Metrics avoid unbounded label cardinality",
-        "Alerts are symptom-based and actionable"
+        "Logs are structured events with a correlation id and app version, not print statements or prose strings",
+        "Card numbers, emails, and raw gateway responses are kept out of logs and telemetry",
+        "Metrics and analytics avoid unbounded label cardinality and respect consent",
+        "Failures are reported so they can be found by app version, and alerts are symptom-based and actionable"
       ]
     }
   ]
