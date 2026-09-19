@@ -239,8 +239,11 @@ flutter run --profile
 # Startup: writes build/start_up_info.json (time to first frame, framework init)
 flutter run --profile --trace-startup
 
-# App size: writes a code-size-analysis JSON; open it in DevTools' app size tool
-flutter build apk --analyze-size        # also: appbundle, ios
+# App size: writes a code-size-analysis JSON; open it in DevTools' app size tool.
+# Android needs a single ABI: without --target-platform the build fails with
+# "Cannot perform code size analysis when building for multiple ABIs".
+flutter build appbundle --analyze-size --target-platform android-arm64
+flutter build ios --analyze-size
 
 # Repeatable frame timing in a test (integration_test + traceAction / TimelineSummary)
 flutter drive --profile --driver=test_driver/perf_driver.dart --target=integration_test/scroll_perf_test.dart

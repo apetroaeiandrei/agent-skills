@@ -62,8 +62,11 @@ flutter run --profile
 # Startup: writes build/start_up_info.json (time to first frame)
 flutter run --profile --trace-startup
 
-# App size: writes a code-size-analysis JSON; open it in DevTools' app size tool
-flutter build apk --analyze-size        # also: appbundle, ios
+# App size: writes a code-size-analysis JSON; open it in DevTools' app size tool.
+# Android needs a single ABI: without --target-platform the build fails with
+# "Cannot perform code size analysis when building for multiple ABIs".
+flutter build appbundle --analyze-size --target-platform android-arm64
+flutter build ios --analyze-size
 
 # Repeatable frame timing in a test: integration_test + traceAction / TimelineSummary,
 # run with `flutter drive --profile` (see test-driven-development for the setup)
@@ -358,7 +361,7 @@ Do the same in a Cubit's `close()` for subscriptions and timers you own. Verify 
 #### App Size
 
 ```bash
-flutter build apk --analyze-size                 # or appbundle / ios; inspect the largest contributors
+flutter build appbundle --analyze-size --target-platform android-arm64   # largest contributors (one ABI at a time)
 flutter build appbundle                           # Play splits per ABI and density from the bundle
 flutter build apk --split-per-abi                 # if distributing APKs directly
 flutter build appbundle --obfuscate --split-debug-info=build/symbols   # smaller, and keep the symbols
@@ -494,8 +497,9 @@ flutter drive --profile \
   --driver=test_driver/perf_driver.dart \
   --target=integration_test/scroll_perf_test.dart
 
-# App size: build with --analyze-size and compare against the stored baseline
-flutter build appbundle --analyze-size
+# App size: build with --analyze-size and compare against the stored baseline.
+# Pin the same ABI every run, or the numbers aren't comparable.
+flutter build appbundle --analyze-size --target-platform android-arm64
 ```
 
 ## See Also

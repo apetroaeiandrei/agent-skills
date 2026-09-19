@@ -152,7 +152,7 @@ Picking a dimension means installing something. Don't leave the user with a numb
 | Accessibility | `flutter_test` guidelines | already there | `flutter test` (tests using `meetsGuideline(...)`) | zero failures |
 | Performance: frames | `integration_test` + `TimelineSummary` | already there | `flutter drive --profile --driver=... --target=...` on a device | p90/p99 frame build and raster budget |
 | Performance: startup | Flutter tooling | already there | `flutter run --profile --trace-startup` | time to first frame budget |
-| Performance: app size | Flutter tooling | already there | `flutter build appbundle --analyze-size` | size budget vs. baseline |
+| Performance: app size | Flutter tooling | already there | `flutter build appbundle --analyze-size --target-platform android-arm64` (Android needs one ABI) | size budget vs. baseline |
 | Architecture | `import_lint` (or a `custom_lint` rule) | `dart pub add --dev import_lint` | see the package's README | any violation |
 | Assertion quality | a Dart mutation-testing package (optional; tooling is less mature than in JS) | per package | scope to changed files | mutation score |
 | Security: secrets | gitleaks | `brew install gitleaks` | `gitleaks detect --redact --no-banner` | any finding |

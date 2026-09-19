@@ -59,7 +59,7 @@ Pull Request Opened
 
 Two Flutter-specific rules:
 
-- **Pin the Flutter version** (declare `environment: flutter:` in `pubspec.yaml`, or use FVM's `.fvmrc`) so local machines and CI build with the same SDK. Bump it deliberately in its own PR.
+- **Pin the Flutter version** (declare `environment: flutter:` in `pubspec.yaml`, or use FVM's `.fvmrc`) so local machines and CI build with the same SDK. Bump it deliberately in its own PR. For `flutter-version-file: pubspec.yaml` the value must be an **exact** version (`flutter: 3.35.0`); a range like `">=3.35.0 <4.0.0"` — the usual `environment:` idiom — is rejected by the action.
 - **Run code generation in CI.** If generated files (`*.freezed.dart`, `*.g.dart`) are gitignored, CI must generate them before analyzing and testing. If they are committed, add a check that regenerating produces no diff (`git diff --exit-code`).
 
 ## GitHub Actions Configuration
@@ -466,7 +466,7 @@ Slow CI pipeline?
 ├── Only run what changed
 │   └── Use path filters to skip unrelated jobs (docs-only PRs; iOS build only when ios/ or pubspec changes)
 ├── Shard the test suite
-│   └── `flutter test --total-shards N --shard-index i` across runners
+│   └── `flutter test --total-shards N --shard-index i` across runners (i is 0-based)
 ├── Move slow work off the critical path
 │   └── Run emulator integration tests and full device-farm runs on merge or nightly, not on every PR
 ├── Watch macOS runner cost
@@ -493,7 +493,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        shard: [1, 2, 3]
+        shard: [0, 1, 2]        # --shard-index is 0-based; it must be < --total-shards
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -502,6 +502,8 @@ jobs:
       - run: dart run build_runner build -d
       - run: flutter test --total-shards 3 --shard-index ${{ matrix.shard }} --coverage
 ```
+
+Starting the matrix at 1 is the common mistake: the last job fails with `--shard-index must be less than --total-shards`, and shard 0 never runs, so those tests silently go unexecuted while the rest of the matrix stays green.
 
 ## Common Rationalizations
 
