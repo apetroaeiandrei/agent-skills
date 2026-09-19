@@ -149,7 +149,7 @@ I scanned your codebase and see you're using a block-based editor architecture w
 
 The competitive pressure framing matters — this might be a checkbox feature (must-have to stay in the consideration set) rather than a differentiator. That changes how much you should invest.
 
-I see your document model uses independent blocks with a flat ordering system (`src/models/document.ts:45`). That's actually favorable — block-level granularity means conflicts are rarer than character-level editing.
+I see your document model uses independent blocks with a flat ordering system (`lib/models/document.dart:45`). That's actually favorable — block-level granularity means conflicts are rarer than character-level editing.
 
 Here are 5 variations:
 
