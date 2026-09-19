@@ -34,6 +34,16 @@ docs/         → Setup guides for different tools
 - Shared references are in the root `references/` directory; the emerging convention for self-contained, distributable skills keeps a skill's own references inside `skills/<name>/references/`
 - Supporting files only created when content exceeds 100 lines
 
+## Flutter Fork Conventions
+
+This checkout is a Flutter mobile adaptation of the upstream pack. When editing skills, agents, commands, or references here:
+
+- Examples are Dart and Flutter, not TypeScript or React. Backend examples (API contracts, SQL, caching) may stay in the backend's language, and are labelled as server side
+- State and models use Cubit and freezed (never Equatable); freezed unions are `sealed` and single-constructor models are `abstract`, per the freezed docs. Mention `dart run build_runner build -d` after freezed changes
+- Device work goes through the Dart MCP server and mobile-mcp (see `flutter-devtools-and-device-testing`); do not reintroduce Chrome DevTools or browser workflows
+- Renamed items keep their new names everywhere: `flutter-devtools-and-device-testing`, `flutter-ui-engineering`, `mobile-performance-auditor`, `/perf-mobile`
+- Keep evals and fixtures in step with the skill they belong to, and re-run the validators and `node scripts/run-evals.js` after changing a description, since routing is scored on vocabulary
+
 ## Contributing
 
 Before adding a new skill or significantly reworking an existing one, run the pre-flight checks in [CONTRIBUTING.md](CONTRIBUTING.md#before-proposing-a-new-skill): search the catalog, check open PRs, confirm the idea fits [docs/skill-anatomy.md](docs/skill-anatomy.md), and justify the gap. Prefer extending an existing skill over adding a near-duplicate. CONTRIBUTING.md is the single source of truth for this workflow; do not restate its checklist here or elsewhere, link to it.

@@ -63,11 +63,11 @@ GitHub Copilot supports project-level instructions via `.github/copilot-instruct
 - Write tests before code (TDD)
 - For bugs: write a failing test first, then fix (Prove-It pattern)
 - Test hierarchy: unit > integration > e2e (use the lowest level that captures the behavior)
-- Run `npm test` after every change
+- Run `flutter test` after every change
 
 ## Code Quality
 - Review across five axes: correctness, readability, architecture, security, performance
-- Every PR must pass: lint, type check, tests, build
+- Every PR must pass: `flutter analyze`, `dart format`, tests, build
 - No secrets in code or version control
 
 ## Implementation

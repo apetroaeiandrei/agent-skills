@@ -113,7 +113,7 @@ Add **separate** `.mdc` files for repo-specific standards (style, language, stac
 ---
 description: Shown in Cursor rule UI
 alwaysApply: false
-globs: "**/*.{ts,tsx}"
+globs: "**/*.dart"
 ---
 
 # Your rule content

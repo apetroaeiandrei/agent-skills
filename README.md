@@ -19,6 +19,22 @@ Skills encode the workflows, quality gates, and best practices that senior engin
 
 ---
 
+## Flutter Mobile Fork
+
+This fork adapts the pack for **Flutter mobile development** (iOS and Android). The lifecycle, commands, and skill structure are unchanged; the content is tailored to Flutter and Dart.
+
+**What changed**
+
+- **Renamed:** `browser-testing-with-devtools` → `flutter-devtools-and-device-testing` (Flutter DevTools, the Dart MCP server, and [mobile-mcp](https://github.com/mobile-next/mobile-mcp)), `frontend-ui-engineering` → `flutter-ui-engineering`, `web-performance-auditor` → `mobile-performance-auditor`, and `/webperf` → `/perf-mobile`.
+- **Tailored:** performance, security, testing, CI/CD, shipping and store releases, observability, API design, debugging, deprecation and migration, code review, simplification, and source-driven development now use Flutter, Dart, and mobile practices. The shared `references/` checklists are rewritten to match, and the backend material a mobile app depends on is kept.
+- **Unchanged:** interview, ideation, spec, planning, context engineering, doubt-driven development, git workflow, documentation, and constraints keep their process, with Flutter examples.
+
+**Conventions the skills assume:** Bloc with Cubit for state, [freezed](https://pub.dev/packages/freezed) for states and models (never Equatable, with `dart run build_runner build -d` after changing them), `go_router` for navigation, and the Dart MCP server plus mobile-mcp for running and driving the app.
+
+**Using this fork:** clone `https://github.com/apetroaeiandrei/agent-skills.git` and run `claude --plugin-dir /path/to/agent-skills`. The install commands further down this README reference the upstream repository, which contains the original web versions of these skills.
+
+---
+
 ## Commands
 
 9 slash commands that map to the development lifecycle. Each one activates the right skills automatically.

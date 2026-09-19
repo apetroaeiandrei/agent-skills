@@ -88,7 +88,7 @@ Helps agents and humans decide if this skill applies to the current task. Includ
 ### Core Process
 The heart of the skill. This is the step-by-step workflow the agent follows. Must be specific and actionable — not vague advice.
 
-**Good:** "Run `npm test` and verify all tests pass"
+**Good:** "Run `flutter test` and verify all tests pass"
 **Bad:** "Make sure the tests work"
 
 ### Common Rationalizations
@@ -147,7 +147,7 @@ When a skill ships runnable helpers under `scripts/`, each script follows these 
 ## Writing Principles
 
 1. **Process over knowledge.** Skills are workflows, not reference docs. Steps, not facts.
-2. **Specific over general.** "Run `npm test`" beats "verify the tests".
+2. **Specific over general.** "Run `flutter test`" beats "verify the tests".
 3. **Evidence over assumption.** Every verification checkbox requires proof.
 4. **Anti-rationalization.** Every skip-worthy step needs a counter-argument in the rationalizations table.
 5. **Progressive disclosure.** Main SKILL.md is the entry point. Supporting files are loaded only when needed.
