@@ -1,6 +1,6 @@
 ---
 name: performance-optimization
-description: Optimizes application performance across frontend, backend, queries, and databases. Use when performance requirements exist, when you suspect performance regressions, when Core Web Vitals or load times need improvement, when N+1 query patterns need fixing, or when profiling reveals bottlenecks.
+description: Optimizes application performance across Flutter apps, backend, queries, and databases. Use when performance requirements exist, when you suspect performance regressions, when jank, slow startup, memory growth, or app size need improvement, when N+1 query patterns need fixing, or when profiling reveals bottlenecks.
 ---
 
 # Performance Optimization
@@ -11,21 +11,29 @@ Measure before optimizing. Performance work without measurement is guessing — 
 
 ## When to Use
 
-- Performance requirements exist in the spec (load time budgets, response time SLAs)
-- Users or monitoring report slow behavior
-- Core Web Vitals scores are below thresholds
+- Performance requirements exist in the spec (frame budgets, startup time, app size, response time SLAs)
+- Users or monitoring report jank, slow startup, crashes, ANRs, or battery drain
+- Frame times, cold start, or app size are past their budget
 - You suspect a change introduced a regression
-- Building features that handle large datasets or high traffic
+- Building features that handle large datasets, long lists, or high traffic
 
 **When NOT to use:** Don't optimize before you have evidence of a problem. Premature optimization adds complexity that costs more than the performance it gains.
 
-## Core Web Vitals Targets
+## Mobile Performance Targets
 
-| Metric | Good | Needs Improvement | Poor |
-|--------|------|-------------------|------|
-| **LCP** (Largest Contentful Paint) | ≤ 2.5s | ≤ 4.0s | > 4.0s |
-| **INP** (Interaction to Next Paint) | ≤ 200ms | ≤ 500ms | > 500ms |
-| **CLS** (Cumulative Layout Shift) | ≤ 0.1 | ≤ 0.25 | > 0.25 |
+Treat these as defaults. A project's own budget (see `constraint-driven-development`) overrides them.
+
+| Metric | Target | Notes |
+|--------|--------|-------|
+| **Frame build time** (UI thread) | ≤ 16.6ms at 60Hz, ≤ 8.3ms at 120Hz | Build + layout must fit the frame budget on the slowest device you support |
+| **Frame raster time** (raster thread) | Same budget | Painting, clipping, shaders, `saveLayer` |
+| **Frozen frames** | None (a frame over 700ms) | Android vitals reports these as frozen frames |
+| **Cold start** (time to first frame) | Project budget | Android vitals flags cold start of 5s or more as slow |
+| **Memory** | No sustained growth across repeated navigation | Growth means a leak; a high steady state risks out-of-memory kills |
+| **App size** | Project budget | Download and install size, tracked per release |
+| **Crash / ANR rate** | Below the platform's bad-behavior thresholds | Play Console vitals, Xcode Organizer |
+
+**Always measure in profile mode on a real device.** Debug mode is misleading by an order of magnitude, and emulators and simulators do not reflect real GPUs, thermals, or memory pressure.
 
 ## The Optimization Workflow
 
@@ -41,22 +49,34 @@ Measure before optimizing. Performance work without measurement is guessing — 
 
 Two complementary approaches — use both:
 
-- **Synthetic (Lighthouse, DevTools Performance tab):** Controlled conditions, reproducible. Best for CI regression detection and isolating specific issues.
-- **RUM (web-vitals library, CrUX):** Real user data in real conditions. Required to validate that a fix actually improved user experience.
+- **Lab (profile mode on a real device):** Controlled conditions, reproducible. Best for CI regression detection and isolating specific issues. Flutter DevTools, `integration_test` timeline summaries, and `--trace-startup`.
+- **Field (Play Console vitals, Xcode Organizer, Firebase Performance, Crashlytics):** Real users on real devices. Required to validate that a fix actually improved user experience, especially on the low-end devices you don't own.
 
-**Frontend:**
+**Flutter app:**
 ```bash
-# Synthetic: Lighthouse in Chrome DevTools (or CI)
-# Chrome DevTools → Performance tab → Record
-# Chrome DevTools MCP → Performance trace
+# Lab: profile mode on a connected physical device
+flutter run --profile
+# DevTools → Performance tab → record; check UI vs raster thread, jank frames, rebuild counts
+# DevTools → Memory tab → snapshots before and after repeated navigation
 
-# RUM: Web Vitals library in code
-import { onLCP, onINP, onCLS } from 'web-vitals';
+# Startup: writes build/start_up_info.json (time to first frame)
+flutter run --profile --trace-startup
 
-onLCP(console.log);
-onINP(console.log);
-onCLS(console.log);
+# App size: writes a code-size-analysis JSON; open it in DevTools' app size tool
+flutter build apk --analyze-size        # also: appbundle, ios
+
+# Repeatable frame timing in a test: integration_test + traceAction / TimelineSummary,
+# run with `flutter drive --profile` (see test-driven-development for the setup)
 ```
+
+```dart
+// Custom spans show up in the DevTools timeline
+import 'dart:developer';
+
+final result = Timeline.timeSync('parse-tasks', () => parseTasks(body));
+```
+
+Agent-driven checks: `mobile-mcp` can repeat a cold start and record the screen, but neither it nor the Dart MCP server produces a frame timeline. Get that from DevTools. See `flutter-devtools-and-device-testing`, or run `/perf-mobile` for a structured audit.
 
 **Backend:**
 ```bash
@@ -76,20 +96,27 @@ Use the symptom to decide what to measure first:
 
 ```
 What is slow?
-├── First page load
-│   ├── Large bundle? --> Measure bundle size, check code splitting
-│   ├── Slow server response? --> Measure TTFB in DevTools Network waterfall
-│   │   ├── DNS long? --> Add dns-prefetch / preconnect for known origins
-│   │   ├── TCP/TLS long? --> Enable HTTP/2, check edge deployment, keep-alive
-│   │   └── Waiting (server) long? --> Profile backend, check queries and caching
-│   └── Render-blocking resources? --> Check network waterfall for CSS/JS blocking
+├── App startup
+│   ├── Long time to first frame? --> Measure with --trace-startup; look for work before runApp
+│   ├── Serial SDK initialization? --> Parallelize with Future.wait, defer what the first screen doesn't need
+│   └── Blank or white screen before the UI? --> Check native splash handoff and first-screen data loading
+├── Scrolling or animation janks
+│   ├── UI thread over budget? --> Profile build/layout: rebuild counts, heavy build(), non-lazy lists
+│   ├── Raster thread over budget? --> Look for saveLayer, Opacity, clips, blurs, oversized images, shaders
+│   └── Only the first run of an animation? --> Shader compilation; confirm which renderer the target uses
 ├── Interaction feels sluggish
-│   ├── UI freezes on click? --> Profile main thread, look for long tasks (>50ms)
-│   ├── Form input lag? --> Check re-renders, controlled component overhead
-│   └── Animation jank? --> Check layout thrashing, forced reflows
-├── Page after navigation
-│   ├── Data loading? --> Measure API response times, check for waterfalls
-│   └── Client rendering? --> Profile component render time, check for N+1 fetches
+│   ├── UI freezes on tap? --> Long synchronous work on the UI isolate (parsing, sorting, crypto)
+│   ├── Input lag in forms? --> Rebuild scope; is the whole screen rebuilding per keystroke?
+│   └── Keyboard opens slowly? --> MediaQuery.of rebuilding large trees; heavy layout below the field
+├── After navigation
+│   ├── Data loading? --> Measure API response times, check for sequential request waterfalls
+│   └── Screen build slow? --> Profile widget build time, check for N+1 fetches from the client
+├── Memory grows or the app is killed
+│   └── Snapshot before/after repeated navigation --> undisposed controllers/subscriptions, retained contexts, oversized images
+├── App is too large
+│   └── Run --analyze-size --> largest packages, assets, ABIs
+├── Battery drain
+│   └── Timers, polling, location, wakelocks, animations running off-screen
 └── Backend / API
     ├── Single endpoint slow? --> Profile database queries, check indexes
     ├── All endpoints slow? --> Check connection pool, memory, CPU
@@ -100,14 +127,17 @@ What is slow?
 
 Common bottlenecks by category:
 
-**Frontend:**
+**Flutter app:**
 
 | Symptom | Likely Cause | Investigation |
 |---------|-------------|---------------|
-| Slow LCP | Large images, render-blocking resources, slow server | Check network waterfall, image sizes |
-| High CLS | Images without dimensions, late-loading content, font shifts | Check layout shift attribution |
-| Poor INP | Heavy JavaScript on main thread, large DOM updates | Check long tasks in Performance trace |
-| Slow initial load | Large bundle, many network requests | Check bundle size, code splitting |
+| Slow cold start | Serial SDK init before `runApp`, first screen blocked on network, eager Cubit creation | `--trace-startup`, read `main()` |
+| Jank while scrolling | Non-lazy lists, expensive item builds, full-size image decoding | DevTools frame chart, rebuild counts |
+| Raster-thread jank | `Opacity`, clips, blurs, `saveLayer`, oversized images, shader compilation | DevTools raster timeline |
+| UI freezes on tap | Large JSON parsing, sorting, or crypto on the UI isolate | Long frames in the UI-thread timeline |
+| Excess rebuilds | `setState` high in the tree, whole-screen `BlocBuilder`, missing `const`, missing state equality | Rebuild counts in DevTools |
+| Memory growth | Undisposed controllers and subscriptions, retained `BuildContext`, unbounded image cache | Memory snapshots across navigation |
+| Large app size | Unused packages and assets, all ABIs bundled, uncompressed images | `--analyze-size` |
 
 **Backend:**
 
@@ -201,118 +231,140 @@ const pool = new Pool({
 
 **Bigger is not faster.** A pool larger than what the database can execute concurrently just relocates the queue from your app to the database, where it is harder to see. When instance count is unbounded (serverless, autoscaling), a proxy that multiplexes connections (pgbouncer, RDS Proxy) is the fix, not a higher `max`.
 
-#### Missing Image Optimization (Frontend)
+#### Non-Lazy Lists (Flutter)
 
-```html
-<!-- BAD: No dimensions, no format optimization -->
-<img src="/hero.jpg" />
+```dart
+// BAD: builds every item up front, even the thousands off-screen
+ListView(children: tasks.map((t) => TaskItem(task: t)).toList())
 
-<!-- GOOD: Hero / LCP image — art direction + resolution switching, high priority -->
-<!--
-  Two techniques combined:
-  - Art direction (media): different crop/composition per breakpoint
-  - Resolution switching (srcset + sizes): right file size per screen density
--->
-<picture>
-  <!-- Mobile: portrait crop (8:10) -->
-  <source
-    media="(max-width: 767px)"
-    srcset="/hero-mobile-400.avif 400w, /hero-mobile-800.avif 800w"
-    sizes="100vw"
-    width="800"
-    height="1000"
-    type="image/avif"
-  />
-  <source
-    media="(max-width: 767px)"
-    srcset="/hero-mobile-400.webp 400w, /hero-mobile-800.webp 800w"
-    sizes="100vw"
-    width="800"
-    height="1000"
-    type="image/webp"
-  />
-  <!-- Desktop: landscape crop (2:1) -->
-  <source
-    srcset="/hero-800.avif 800w, /hero-1200.avif 1200w, /hero-1600.avif 1600w"
-    sizes="(max-width: 1200px) 100vw, 1200px"
-    width="1200"
-    height="600"
-    type="image/avif"
-  />
-  <source
-    srcset="/hero-800.webp 800w, /hero-1200.webp 1200w, /hero-1600.webp 1600w"
-    sizes="(max-width: 1200px) 100vw, 1200px"
-    width="1200"
-    height="600"
-    type="image/webp"
-  />
-  <img
-    src="/hero-desktop.jpg"
-    width="1200"
-    height="600"
-    fetchpriority="high"
-    alt="Hero image description"
-  />
-</picture>
-
-<!-- GOOD: Below-the-fold image — lazy loaded + async decoding -->
-<img
-  src="/content.webp"
-  width="800"
-  height="400"
-  loading="lazy"
-  decoding="async"
-  alt="Content image description"
-/>
+// GOOD: builds only what is visible; a fixed extent skips per-item measurement
+ListView.builder(
+  itemCount: tasks.length,
+  itemExtent: 72,
+  itemBuilder: (context, i) => TaskItem(task: tasks[i]),
+)
 ```
 
-#### Unnecessary Re-renders (React)
+Also avoid `shrinkWrap: true` on large scrollables and a `Column` of many children inside `SingleChildScrollView`.
 
-```tsx
-// BAD: Creates new object on every render, causing children to re-render
-function TaskList() {
-  return <TaskFilters options={{ sortBy: 'date', order: 'desc' }} />;
+#### Unnecessary Rebuilds (Flutter)
+
+```dart
+// BAD: the whole screen rebuilds whenever any part of the state changes
+BlocBuilder<TasksCubit, TasksState>(
+  builder: (context, state) => Scaffold(/* large tree */),
+)
+
+// GOOD: rebuild only the widget that reads the value
+BlocSelector<TasksCubit, TasksState, int>(
+  selector: (state) => switch (state) {
+    TasksLoaded(:final tasks) => tasks.where((t) => t.done).length,
+    _ => 0,
+  },
+  builder: (context, doneCount) => Text('$doneCount done'),
+)
+
+// GOOD: const subtrees are never rebuilt
+const SizedBox(height: Spacing.md),
+const _Header(),
+```
+
+- Freezed states give value equality, so emitting an equal state does not rebuild listeners. Hand-written state classes without `==` rebuild on every `emit`.
+- Extract subtrees into small widget classes (not `_buildX()` methods) so `setState` and rebuilds affect less.
+- Never create futures, controllers, or expensive objects inside `build()`.
+
+#### Heavy Work on the UI Isolate
+
+```dart
+// BAD: parsing a large payload on the UI isolate drops frames
+final tasks = (jsonDecode(body) as List)
+    .map((e) => Task.fromJson(e as Map<String, Object?>))
+    .toList();
+
+// GOOD: run it on another isolate
+final tasks = await Isolate.run(
+  () => (jsonDecode(body) as List)
+      .map((e) => Task.fromJson(e as Map<String, Object?>))
+      .toList(),
+);
+```
+
+Measure first: spawning an isolate has a cost, and small payloads are not worth it. Also avoid synchronous file I/O (`readAsStringSync`) on the UI isolate.
+
+#### Slow Startup
+
+```dart
+// BAD: serial initialization blocks the first frame
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initCrashReporting();
+  await openDatabase();
+  await loadRemoteConfig();
+  runApp(const App());
 }
 
-// GOOD: Stable reference
-const DEFAULT_OPTIONS = { sortBy: 'date', order: 'desc' } as const;
-function TaskList() {
-  return <TaskFilters options={DEFAULT_OPTIONS} />;
-}
-
-// Use React.memo for expensive components
-const TaskItem = React.memo(function TaskItem({ task }: Props) {
-  return <div>{/* expensive render */}</div>;
-});
-
-// Use useMemo for expensive computations
-function TaskStats({ tasks }: Props) {
-  const stats = useMemo(() => calculateStats(tasks), [tasks]);
-  return <div>{stats.completed} / {stats.total}</div>;
+// GOOD: run independent work in parallel; defer what the first screen doesn't need
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Future.wait([initCrashReporting(), openDatabase()]);
+  runApp(const App());
+  unawaited(loadRemoteConfig());
 }
 ```
 
-#### Large Bundle Size
+Create Cubits lazily (`BlocProvider` is lazy by default) and keep app-wide providers to what is genuinely needed at launch.
 
-```typescript
-// Modern bundlers (Vite, webpack 5+) handle named imports with tree-shaking automatically,
-// provided the dependency ships ESM and is marked `sideEffects: false` in package.json.
-// Profile before changing import styles — the real gains come from splitting and lazy loading.
+#### Oversized Images (Flutter)
 
-// GOOD: Dynamic import for heavy, rarely-used features
-const ChartLibrary = lazy(() => import('./ChartLibrary'));
+```dart
+// BAD: decodes a full-resolution photo to show a 56dp avatar
+Image.network(url, width: 56, height: 56)
 
-// GOOD: Route-level code splitting wrapped in Suspense
-const SettingsPage = lazy(() => import('./pages/Settings'));
+// GOOD: decode at display size (cacheWidth is in physical pixels) and cache remote images
+Image.network(
+  url,
+  width: 56,
+  height: 56,
+  cacheWidth: (56 * MediaQuery.devicePixelRatioOf(context)).round(),
+)
+```
 
-function App() {
-  return (
-    <Suspense fallback={<Spinner />}>
-      <SettingsPage />
-    </Suspense>
-  );
+Use an image caching package (such as `cached_network_image`) for remote images, ship assets in efficient formats and reasonable dimensions, and `precacheImage` only what the first frame needs.
+
+#### Memory Leaks
+
+```dart
+class _SearchState extends State<Search> {
+  final _controller = TextEditingController();
+  late final StreamSubscription<String> _sub;
+
+  @override
+  void initState() {
+    super.initState();
+    _sub = widget.results.listen(_onResult);
+  }
+
+  @override
+  void dispose() {
+    _sub.cancel();        // Missing cancels and disposes are the usual leak
+    _controller.dispose();
+    super.dispose();
+  }
 }
 ```
+
+Do the same in a Cubit's `close()` for subscriptions and timers you own. Verify with memory snapshots before and after repeatedly opening and closing the screen.
+
+#### App Size
+
+```bash
+flutter build apk --analyze-size                 # or appbundle / ios; inspect the largest contributors
+flutter build appbundle                           # Play splits per ABI and density from the bundle
+flutter build apk --split-per-abi                 # if distributing APKs directly
+flutter build appbundle --obfuscate --split-debug-info=build/symbols   # smaller, and keep the symbols
+```
+
+Remove unused packages, assets, fonts, and icon sets; compress images; download large assets on demand instead of bundling them. Consider deferred components for rarely used features on Android.
 
 #### Missing Caching (Backend)
 
@@ -369,7 +421,7 @@ res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
 
 A fix is a hypothesis until you re-measure. This step decides whether it survives.
 
-**Re-measure the way you measured the baseline:** same command, same conditions, same fixed budget (wall-clock, sample count, or request count). A baseline taken on a cold cache against a result taken on a warm one measures the cache, not your change.
+**Re-measure the way you measured the baseline:** same command, same conditions, same fixed budget (wall-clock, sample count, or request count). On a device that means the same physical device, build mode (profile), battery and power settings, and thermal state: a warm, throttled phone against a cool one measures the phone. A baseline taken on a cold cache against a result taken on a warm one measures the cache, not your change.
 
 **Change one thing at a time.** Three optimizations landed together produce one number, and you cannot attribute it. If they must ship together, measure each in isolation first.
 
@@ -394,25 +446,31 @@ Reverted work leaves no trace in git history, which is exactly why the same dead
 
 | Idea | Baseline → Result | Verdict | Why |
 |---|---|---|---|
-| Memoize the row component | INP 240ms → 235ms | reverted | Inside noise (±15ms). Rows weren't the bottleneck. |
-| Virtualize the list | INP 240ms → 90ms | kept | Long tasks gone from the trace. |
-| Preconnect to the API origin | LCP 2.8s → 2.8s | reverted | Already same-origin. |
+| Wrap each row in `RepaintBoundary` | p99 frame 24ms → 23ms | reverted | Inside noise (±2ms). Painting wasn't the bottleneck. |
+| Switch to `ListView.builder` with `itemExtent` | p99 frame 24ms → 9ms | kept | Jank frames gone from the timeline. |
+| Move JSON parsing to `Isolate.run` | Cold start 2.1s → 2.1s | reverted | Payload is 4KB; isolate overhead cancelled the gain. |
 
 A section in the PR description or a `PERF.md` in the repo both work. What matters is that the next person (or the next agent) reads it before proposing an experiment, and doesn't re-run one that already failed.
 
 ### Step 5: Guard Against Regression
 
 Guard the metric the user actually feels, not every available number. Use the
-same LCP, INP, p95 latency, or other primary metric that justified the fix.
+same frame time, cold start, app size, p95 latency, or other primary metric that
+justified the fix.
 
 Use two complementary layers when the surface is user-facing:
 
-- **Synthetic CI gate:** Catch reproducible regressions before merge with a
-  performance budget. Repeat noisy measurements or compare a median/trend so
-  normal run-to-run variance does not turn the gate into a flaky check.
-- **Field monitoring:** Alert on a meaningful p75 movement in RUM data. Use
-  attributed `web-vitals` data to locate the cause; treat CrUX's rolling window
-  as confirmation rather than an immediate alert.
+- **Lab CI gate:** Catch reproducible regressions before merge with a
+  performance budget: an `integration_test` timeline summary with frame-time
+  thresholds, run in profile mode on a consistent physical device or device
+  farm (emulator variance makes it a flaky gate), and an app size check against
+  the last release's `--analyze-size` output. Repeat noisy measurements or
+  compare a median/trend so normal run-to-run variance does not turn the gate
+  into a flaky check.
+- **Field monitoring:** Alert on meaningful movement in Play Console vitals,
+  Firebase Performance, Crashlytics, or Xcode Organizer data. Use it to locate
+  the cause by app version and device model; treat store dashboards' delay as
+  confirmation rather than an immediate alert.
 
 When either guard fires, return to Step 1 and establish a fresh baseline before
 proposing another fix.
@@ -420,22 +478,24 @@ proposing another fix.
 **Set budgets and enforce them:**
 
 ```
-JavaScript bundle: < 200KB gzipped (initial load)
-CSS: < 50KB gzipped
-Images: < 200KB per image (above the fold)
-Fonts: < 100KB total
+Frame build / raster time: ≤ 16.6ms at 60Hz (8.3ms at 120Hz), p99 on a mid-range device
+Frozen frames: none on core flows
+Cold start: within the project budget on a mid-range device
+App download size: within the project budget, tracked per release
+Memory: no growth across repeated navigation
+Crash / ANR rate: below platform thresholds
 API response time: < 200ms (p95)
-Time to Interactive: < 3.5s on 4G
-Lighthouse Performance score: ≥ 90
 ```
 
 **Enforce in CI:**
 ```bash
-# Bundle size check
-npx bundlesize --config bundlesize.config.json
+# Frame timing (profile mode, real device or device farm)
+flutter drive --profile \
+  --driver=test_driver/perf_driver.dart \
+  --target=integration_test/scroll_perf_test.dart
 
-# Lighthouse CI
-npx lhci autorun
+# App size: build with --analyze-size and compare against the stored baseline
+flutter build appbundle --analyze-size
 ```
 
 ## See Also
@@ -449,9 +509,12 @@ For detailed performance checklists, optimization commands, and anti-pattern ref
 |---|---|
 | "We'll optimize later" | Performance debt compounds. Fix obvious anti-patterns now, defer micro-optimizations. |
 | "It's fast on my machine" | Your machine isn't the user's. Profile on representative hardware and networks. |
+| "It runs at 60fps on my flagship phone" | Users own mid-range and older devices. Profile on the slowest device you support. |
+| "Debug mode feels slow, so it must be slow" | Debug mode is not representative in either direction. Measure in profile mode on a real device. |
+| "Wrap it in `RepaintBoundary` and `const` everywhere" | Blanket application adds clutter and can add cost. Use them where the timeline shows they help. |
 | "This optimization is obvious" | If you didn't measure, you don't know. Profile first. |
 | "Users won't notice 100ms" | Research shows 100ms delays impact conversion rates. Users notice more than you think. |
-| "The framework handles performance" | Frameworks prevent some issues but can't fix N+1 queries or oversized bundles. |
+| "The framework handles performance" | Frameworks prevent some issues but can't fix N+1 queries, oversized images, or heavy work on the UI isolate. |
 | "The query is slow, add an index" | Read the plan first. The index may already exist and be unusable, and every index taxes writes forever. |
 | "Just cache it" | Caching an already-cheap call buys nothing and adds a staleness bug. Cache what is expensive *and* re-read far more than written. |
 | "Raise the pool size, we're running out of connections" | A pool bigger than the database can serve moves the queue somewhere less visible. Find what holds connections. |
@@ -468,10 +531,15 @@ For detailed performance checklists, optimization commands, and anti-pattern ref
 - A cache with no stated staleness window and no invalidation strategy
 - Connection pool size raised in response to exhaustion, without finding what holds connections
 - List endpoints without pagination
-- Images without dimensions, lazy loading, or responsive sizes
-- Bundle size growing without review
+- Images decoded at full resolution for small display sizes, or remote images with no caching
+- App size growing without review
+- Performance measured in debug mode or on an emulator
+- `ListView(children: [...])` or `shrinkWrap: true` on long lists
+- Whole-screen `BlocBuilder`s, or states without value equality, forcing needless rebuilds
+- Heavy parsing or synchronous I/O on the UI isolate
+- Controllers, subscriptions, or timers that are never disposed or cancelled
 - No performance monitoring in production
-- `React.memo` and `useMemo` everywhere (overusing is as bad as underusing)
+- `RepaintBoundary`, `const`, or isolates applied everywhere "just in case" (overusing is as bad as underusing)
 - Optimizations kept without a re-measurement that justifies them
 - Several optimizations bundled into one measurement, so no single change can be attributed
 - A "win" that required a test to be changed, skipped, or deleted
@@ -487,8 +555,9 @@ After any performance-related change:
 - [ ] Changes that didn't beat the baseline were reverted, not kept as neutral
 - [ ] Attempts are logged, kept and reverted alike, so a dead idea isn't re-run
 - [ ] The specific bottleneck is identified and addressed
-- [ ] Core Web Vitals are within "Good" thresholds
-- [ ] Bundle size hasn't increased significantly
+- [ ] Frame times are within budget in profile mode on a real, mid-range device
+- [ ] Cold start and memory behavior are within budget (no growth across repeated navigation)
+- [ ] App size hasn't increased significantly (`--analyze-size`)
 - [ ] No N+1 queries in new data fetching code
 - [ ] Any new index is justified by a query plan before and after, and its write cost was considered
 - [ ] Any new cache states what it keys on and how it goes stale
