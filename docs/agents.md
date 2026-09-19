@@ -4,9 +4,9 @@ Specialist personas that play a single role with a single perspective. Each pers
 
 | Persona | Role | Best for |
 |---------|------|----------|
-| [code-reviewer](../agents/code-reviewer.md) | Senior Staff Engineer | Five-axis review before merge |
-| [security-auditor](../agents/security-auditor.md) | Security Engineer | Vulnerability detection, OWASP-style audit |
-| [test-engineer](../agents/test-engineer.md) | QA Engineer | Test strategy, coverage analysis, Prove-It pattern |
+| [code-reviewer](../agents/code-reviewer.md) | Senior Staff Engineer | Five-axis Flutter review before merge |
+| [security-auditor](../agents/security-auditor.md) | Security Engineer | Mobile vulnerability detection, OWASP Mobile Top 10 audit |
+| [test-engineer](../agents/test-engineer.md) | QA Engineer | Flutter test strategy, coverage analysis, Prove-It pattern |
 | [mobile-performance-auditor](../agents/mobile-performance-auditor.md) | Mobile Performance Engineer | Frame rendering, startup, memory, app size, and battery analysis for Flutter apps |
 
 ## How personas relate to skills and commands
@@ -27,7 +27,7 @@ The user (or a slash command) is the orchestrator. **Personas do not call other 
 Pick this when you want one perspective on the current change and the user is in the loop.
 
 - "Review this PR" → invoke `code-reviewer` directly
-- "Are there security issues in `auth.ts`?" → invoke `security-auditor` directly
+- "Are there security issues in `auth_repository.dart`?" → invoke `security-auditor` directly
 - "What tests are missing for the checkout flow?" → invoke `test-engineer` directly
 - "Audit scrolling jank and startup time on the feed screen" → invoke `mobile-performance-auditor` directly
 

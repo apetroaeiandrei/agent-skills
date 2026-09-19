@@ -291,9 +291,9 @@ Pre-configured specialist personas for targeted reviews:
 
 | Agent | Role | Perspective |
 |-------|------|-------------|
-| [code-reviewer](agents/code-reviewer.md) | Senior Staff Engineer | Five-axis code review with "would a staff engineer approve this?" standard |
-| [test-engineer](agents/test-engineer.md) | QA Specialist | Test strategy, coverage analysis, and the Prove-It pattern |
-| [security-auditor](agents/security-auditor.md) | Security Engineer | Vulnerability detection, threat modeling, OWASP assessment |
+| [code-reviewer](agents/code-reviewer.md) | Senior Staff Engineer | Five-axis code review with Flutter checks and the "would a staff engineer approve this?" standard |
+| [test-engineer](agents/test-engineer.md) | QA Specialist | Flutter test strategy (unit, Cubit, widget, golden, integration), coverage analysis, and the Prove-It pattern |
+| [security-auditor](agents/security-auditor.md) | Security Engineer | Mobile vulnerability detection, threat modeling, OWASP Mobile Top 10 assessment |
 | [mobile-performance-auditor](agents/mobile-performance-auditor.md) | Mobile Performance Engineer | Flutter frame, startup, memory, size, and battery audit with Quick/Deep modes and a metric-honesty rule; run it via `/perf-mobile` |
 
 See [docs/agents.md](docs/agents.md) for the decision matrix, orchestration rules, and how personas compose with skills and slash commands.
