@@ -74,7 +74,7 @@ Install these as skills so they activate only when relevant:
 
 - `test-driven-development` — Activates when implementing logic or fixing bugs
 - `spec-driven-development` — Activates when starting a new project or feature
-- `frontend-ui-engineering` — Activates when building UI
+- `flutter-ui-engineering` — Activates when building UI
 - `security-and-hardening` — Activates during security reviews
 - `performance-optimization` — Activates during performance work
 
@@ -84,7 +84,7 @@ Install these as skills so they activate only when relevant:
 
 Many skills in this pack leverage [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) tools to interact with the environment. For example:
 
-- `browser-testing-with-devtools` uses the `chrome-devtools` MCP extension.
+- `flutter-devtools-and-device-testing` uses the Dart and Flutter MCP server (`dart mcp-server`) and mobile-mcp (`@mobilenext/mobile-mcp`).
 - `performance-optimization` can benefit from performance-related MCP tools.
 
 To enable these, ensure you have the relevant MCP extensions installed in your Gemini CLI configuration (`~/.gemini/config.json`).
@@ -107,7 +107,7 @@ This is useful when you want to ensure a specific workflow is followed without w
 
 ## Slash Commands
 
-The repo ships 9 slash commands under `.gemini/commands/`: 8 lifecycle commands plus the `/webperf` specialist audit. Gemini CLI auto-discovers them when you run from the project root.
+The repo ships 9 slash commands under `.gemini/commands/`: 8 lifecycle commands plus the `/perf-mobile` specialist audit. Gemini CLI auto-discovers them when you run from the project root.
 
 | Command | What it does |
 |---------|--------------|
@@ -119,7 +119,7 @@ The repo ships 9 slash commands under `.gemini/commands/`: 8 lifecycle commands 
 | `/review` | Five-axis code review |
 | `/code-simplify` | Reduce complexity without changing behavior |
 | `/ship` | Pre-launch checklist via parallel persona fan-out |
-| `/webperf` | Audit browser-facing apps for Core Web Vitals and performance issues |
+| `/perf-mobile` | Audit Flutter apps for frame, startup, memory, and size issues |
 
 Each command invokes the corresponding skill automatically — no manual skill loading required.
 

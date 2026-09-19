@@ -1,0 +1,9 @@
+name: pagination_fixture
+description: Pagination helper used to exercise debugging discipline.
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dev_dependencies:
+  test: ^1.25.0

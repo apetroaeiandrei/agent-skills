@@ -86,10 +86,10 @@ The skill itself is unchanged. It continues to follow `DETECT → FETCH → IMPL
 # Simulate a PostToolUse payload: cache a page
 echo '{
   "tool_input": {
-    "url": "https://react.dev/reference/react/useActionState",
-    "prompt": "extract the signature"
+    "url": "https://api.flutter.dev/flutter/widgets/PopScope-class.html",
+    "prompt": "extract the description"
   },
-  "tool_response": "useActionState(action, initialState) returns [state, formAction, isPending]"
+  "tool_response": "PopScope: a widget that controls whether the enclosing route can be popped"
 }' | bash hooks/sdd-cache-post.sh
 
 # Inspect the stored entry
@@ -99,8 +99,8 @@ cat .claude/sdd-cache/*.json | jq .
 # Simulate the next PreToolUse on the same URL + prompt
 echo '{
   "tool_input": {
-    "url": "https://react.dev/reference/react/useActionState",
-    "prompt": "extract the signature"
+    "url": "https://api.flutter.dev/flutter/widgets/PopScope-class.html",
+    "prompt": "extract the description"
   }
 }' | bash hooks/sdd-cache-pre.sh
 echo "exit=$?"
@@ -115,7 +115,7 @@ Expected:
 
 1. Register the hooks in `.claude/settings.local.json` as shown above.
 2. Start a Claude Code session in this repo.
-3. Ask the agent to fetch a documentation page (e.g. "fetch `https://react.dev/reference/react/useActionState` and summarize").
+3. Ask the agent to fetch a documentation page (e.g. "fetch `https://api.flutter.dev/flutter/widgets/PopScope-class.html` and summarize").
 4. Verify a file appears under `.claude/sdd-cache/`.
 5. Ask the agent to fetch the same page with the same prompt again.
 6. Verify the second `WebFetch` is blocked and the cached content is returned (visible in the session transcript as a tool error with `[sdd-cache]` prefix).
@@ -155,7 +155,7 @@ The log captures URL, detected `tool_response` shape, HEAD status, and why each 
 
 - **Body is prompt-shaped.** A hit returns the earlier agent's reading of the page, with the original prompt surfaced so the current agent can decide whether it applies. If it doesn't, delete the file under `.claude/sdd-cache/` to force a re-fetch.
 - **Every cache write costs an extra HEAD.** Claude Code doesn't expose the response headers that `WebFetch` already received, so the post hook re-queries the origin to capture `ETag` / `Last-Modified`. One extra roundtrip per miss — the price of keeping this a pure hook with no core changes.
-- **Servers without `ETag` or `Last-Modified` are never cached.** Most official doc sites (react.dev, docs.djangoproject.com, developer.mozilla.org) emit validators. Sites that don't are always re-fetched.
+- **Servers without `ETag` or `Last-Modified` are never cached.** Most official doc sites (api.flutter.dev, docs.flutter.dev, dart.dev, docs.djangoproject.com, developer.mozilla.org) emit validators. Sites that don't are always re-fetched: pub.dev package pages, for example, returned neither header when last checked, so package documentation there is never cached.
 - **A misbehaving server can serve a wrong `304`.** That's a server bug to diagnose, not a cache invariant to defend against; we don't paper over it with a TTL. Delete the entry if you spot a stale one.
 - **Cache is local and per-project.** There is no team-wide shared cache. Adding one would require a signed-content-addressable storage layer, which is out of scope.
 

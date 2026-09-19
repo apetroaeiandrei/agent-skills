@@ -65,12 +65,12 @@ Each slice delivers working end-to-end functionality.
 
 ### Contract-First Slicing
 
-When backend and frontend need to develop in parallel:
+When the backend and the app need to develop in parallel:
 
 ```
 Slice 0: Define the API contract (types, interfaces, OpenAPI spec)
 Slice 1a: Implement backend against the contract + API tests
-Slice 1b: Implement frontend against mock data matching the contract
+Slice 1b: Implement the app against a fake repository or mock data matching the contract
 Slice 2: Integrate and test end-to-end
 ```
 
@@ -127,7 +127,7 @@ If you notice something worth improving outside your task scope, note it — don
 
 ```
 NOTICED BUT NOT TOUCHING:
-- src/utils/format.ts has an unused import (unrelated to this task)
+- lib/core/format.dart has an unused import (unrelated to this task)
 - The auth middleware could use better error messages (separate task)
 → Want me to create tasks for these?
 ```
@@ -201,7 +201,7 @@ Be explicit about what's in scope and what's NOT in scope for each increment.
 After each increment, verify with the repository's own commands (see the test-driven-development skill's Discover the Stack First section):
 
 - [ ] The change does one thing and does it completely
-- [ ] All existing tests still pass (the repository's test command: `npm test`, `./gradlew test`, `pytest`, ...)
+- [ ] All existing tests still pass (the repository's test command: `flutter test`, `dart test`, `./gradlew test`, `pytest`, ...)
 - [ ] The build succeeds (the repository's build command)
 - [ ] Type checking passes, where the stack has one (`npx tsc --noEmit`, `mypy`, ...)
 - [ ] Linting passes (the repository's lint command)

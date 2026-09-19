@@ -1,0 +1,35 @@
+---
+description: Run a mobile performance audit via the mobile-performance-auditor persona
+---
+
+`/perf-mobile` targets Flutter apps specifically. Do not use it for Dart utility packages, CLIs, or server-only code with no UI.
+
+## Determine the mode
+
+**Deep mode** — activate when any of these is available:
+- A DevTools performance capture or frame analysis taken in **profile mode on a real device**
+- An integration-test timeline summary (`traceAction` / `TimelineSummary` JSON)
+- A startup trace (`build/start_up_info.json` from `flutter run --profile --trace-startup`)
+- An app size analysis (`flutter build <target> --analyze-size` JSON)
+- A DevTools memory snapshot, `adb shell dumpsys gfxinfo` / `meminfo` output, or Xcode Instruments results
+- Field data: Play Console Android vitals, Xcode Organizer metrics, or a Firebase Performance / Crashlytics export
+- A device with `mobile-mcp` configured in the harness (repeatable cold start, screen recording, device logs and crash list; see `flutter-devtools-and-device-testing`). It does not provide frame timelines, so ask for a DevTools capture for those.
+
+**Quick mode** — default when none of the above are available. The agent scans source code for structural anti-patterns and labels every finding as `potential impact`.
+
+Debug-mode, emulator, and simulator numbers are not representative. If those are all you have, run in Quick mode and ask for a profile-mode capture on a real device.
+
+## Run the audit
+
+Spawn the `mobile-performance-auditor` subagent. Pass it explicitly:
+
+- The files, widgets, Cubits, or diff under review
+- Any artifact paths (DevTools capture, TimelineSummary, startup trace, size analysis, vitals export) or pasted JSON content
+- The target screen or flow and the device model, OS, and build mode used for any capture
+- A note on which mode you expect (Quick or Deep), so the agent surfaces missing inputs if Deep was intended
+
+The subagent returns a scorecard (only populated with sourced values), a ranked list of findings, positive observations, and proactive recommendations.
+
+## Output
+
+Return the full audit report to the user. No synthesis or merge step is needed — this is a single-persona command.

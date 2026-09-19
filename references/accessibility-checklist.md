@@ -1,160 +1,244 @@
 # Accessibility Checklist
 
-Quick reference for WCAG 2.1 AA compliance. Use alongside the `frontend-ui-engineering` skill.
+Quick reference for accessible Flutter apps: WCAG 2.1 AA (2.2 where required) applied to mobile, plus the Android and iOS platform guidelines. Use alongside the `flutter-ui-engineering` skill.
 
 ## Table of Contents
 
 - [Essential Checks](#essential-checks)
-- [Common HTML Patterns](#common-html-patterns)
+- [Common Flutter Patterns](#common-flutter-patterns)
 - [Testing Tools](#testing-tools)
-- [Quick Reference: ARIA Live Regions](#quick-reference-aria-live-regions)
+- [Quick Reference: Announcements and Live Regions](#quick-reference-announcements-and-live-regions)
 - [Common Anti-Patterns](#common-anti-patterns)
 
 ## Essential Checks
 
-### Keyboard Navigation
-- [ ] All interactive elements focusable via Tab key
-- [ ] Focus order follows visual/logical order
-- [ ] Focus is visible (outline/ring on focused elements)
-- [ ] Custom widgets have keyboard support (Enter to activate, Escape to close)
-- [ ] No keyboard traps (user can always Tab away from a component)
-- [ ] Skip-to-content link at top of page - visible (at least) on keyboard focus
-- [ ] Modals trap focus while open, return focus on close
+### Screen Readers (TalkBack and VoiceOver)
+- [ ] All meaningful images have a `semanticLabel`; decorative images use `excludeFromSemantics: true`
+- [ ] All interactive elements have an accessible label (`tooltip` on `IconButton`, `labelText` on inputs, or `Semantics(label:)`)
+- [ ] Custom tappable widgets expose a role and action (`Semantics(button: true, onTap: ...)`), or better, use `InkWell` / `IconButton` / `TextButton`
+- [ ] Buttons and links have descriptive text (not "Click here" or "More")
+- [ ] Screen and section titles are marked as headings (`Semantics(header: true)`)
+- [ ] Related content that reads as one item is grouped (`MergeSemantics`), and purely decorative widgets are excluded (`ExcludeSemantics`)
+- [ ] Dynamic changes are announced (`Semantics(liveRegion: true)`, SnackBars, or a programmatic announcement)
+- [ ] Reading order matches visual order, and the screen has a meaningful title on navigation
+- [ ] Every screen has been walked through with TalkBack **and** VoiceOver
 
-### Screen Readers
-- [ ] All images have `alt` text (or `alt=""` for decorative images)
-- [ ] All form inputs have associated labels (`<label>` or `aria-label`)
-- [ ] Buttons and links have descriptive text (not "Click here")
-- [ ] Icon-only buttons have `aria-label`
-- [ ] Page has one `<h1>` and headings don't skip levels
-- [ ] Dynamic content changes announced (`aria-live` regions)
-- [ ] Tables have `<th>` headers with scope
+### Focus, Keyboard, and Switch Access
+- [ ] All interactive elements are reachable with an external keyboard, switch access, or D-pad (focusable, activate with Enter/Space)
+- [ ] Focus order follows visual and logical order (`FocusTraversalGroup` where it doesn't)
+- [ ] Focus is visible on focused elements
+- [ ] No focus traps: the user can always move on or go back
+- [ ] Dialogs and sheets use `showDialog` / `showModalBottomSheet`, which scope focus and screen-reader navigation
+- [ ] Focus moves sensibly after content changes (error focus, new screen, closed dialog)
+- [ ] The system back gesture and hardware back button work, and intercepting them (`PopScope`) is deliberate
+
+### Touch Targets and Gestures
+- [ ] Touch targets are at least 48×48 dp (Material) and 44×44 pt (Apple HIG)
+- [ ] Targets are spaced so adjacent ones aren't hit by accident
+- [ ] Every complex gesture (swipe, drag, pinch, long-press, multi-finger) has a single-tap alternative
+- [ ] No action is available only through hover, long-press, or motion (shake, tilt)
+- [ ] Swipe-to-dismiss and reorder have accessible actions (custom semantics actions or visible buttons)
 
 ### Visual
-- [ ] Text contrast ≥ 4.5:1 (normal text) or ≥ 3:1 (large text, 18px+)
-- [ ] UI components contrast ≥ 3:1 against background
-- [ ] Color is not the only way to convey information
-- [ ] Text resizable to 200% without breaking layout
-- [ ] No content that flashes more than 3 times per second
+- [ ] Text contrast ≥ 4.5:1 (normal text) or ≥ 3:1 (large text, 18pt+ or 14pt+ bold), in **light and dark** themes
+- [ ] UI component and icon contrast ≥ 3:1 against the background, including disabled and focused states
+- [ ] Color is not the only way to convey information (icons, text, patterns too)
+- [ ] Layout holds at the largest OS font size (200%) and with bold text, without clipping or overflow
+- [ ] Text scaling is never clamped or disabled to make a layout fit
+- [ ] Non-essential motion respects reduce-motion (`MediaQuery.disableAnimationsOf`)
+- [ ] No content flashes more than 3 times per second
+- [ ] Layout works in portrait and landscape; orientation is not locked without a reason
+- [ ] Layout adapts to small phones, tablets, and split-screen
 
 ### Forms
-- [ ] Every input has a visible label
+- [ ] Every input has a persistent visible label (`labelText`), not just a placeholder or hint
 - [ ] Required fields indicated (not by color alone)
-- [ ] Error messages specific and associated with the field
-- [ ] Error state visible by more than color (icon, text, border)
-- [ ] Form submission errors summarized and focusable
-- [ ] Known fields use autocomplete (for example `type="email" autocomplete="email"`)
+- [ ] Error messages are specific, shown near the field, and reachable by screen readers
+- [ ] Error state is visible by more than color (icon, text, border)
+- [ ] Submission errors are summarized, and focus or announcement takes the user to the problem
+- [ ] Appropriate `keyboardType`, `textInputAction`, and `autofillHints` for known fields
+- [ ] Password fields allow paste and password managers
 
 ### Content
-- [ ] Language declared (`<html lang="en">`)
-- [ ] Page has a descriptive `<title>`
-- [ ] Links distinguish from surrounding text (not by color alone)
-- [ ] Touch targets ≥ 44x44px on mobile
-- [ ] Meaningful empty states (not blank screens)
+- [ ] The app is localized, and layouts support right-to-left languages (`Directionality`, directional padding)
+- [ ] Time-limited actions can be extended or turned off
+- [ ] Audio and video have captions and controls; nothing autoplays with sound
+- [ ] Links and tappable text are distinguishable by more than color
+- [ ] Meaningful empty states and error states (not blank screens)
 
-## Common HTML Patterns
+## Common Flutter Patterns
 
-### Buttons vs. Links
+### Buttons vs. Tap Handlers
 
-```html
-<!-- Use <button> for actions -->
-<button onClick={handleDelete}>Delete Task</button>
+```dart
+// Use a real button widget: focusable, has a role, meets the touch target size
+IconButton(
+  tooltip: 'Delete task',              // Becomes the accessible label
+  icon: const Icon(Icons.delete_outline),
+  onPressed: onDelete,
+)
 
-<!-- Use <a> for navigation -->
-<a href="/tasks/123">View Task</a>
+// GestureDetector exposes nothing to screen readers: BAD
+GestureDetector(onTap: onDelete, child: const Icon(Icons.delete_outline))
 
-<!-- NEVER use div/span as buttons -->
-<div onClick={handleDelete}>Delete</div>  <!-- BAD -->
+// If you must use a custom tap target, add semantics: acceptable
+Semantics(
+  label: 'Delete task',
+  button: true,
+  child: InkWell(onTap: onDelete, child: const Padding(
+    padding: EdgeInsets.all(12),
+    child: Icon(Icons.delete_outline),
+  )),
+)
 ```
 
-### Form Labels
+### Form Labels and Errors
 
-```html
-<!-- Explicit label association -->
-<label htmlFor="email">Email address</label>
-<input id="email" type="email" required />
-
-<!-- Implicit wrapping -->
-<label>
-  Email address
-  <input type="email" required />
-</label>
-
-<!-- Hidden label (visible label preferred) -->
-<input type="search" aria-label="Search tasks" />
+```dart
+// Persistent label; hint is a supplement, never the only label
+TextFormField(
+  keyboardType: TextInputType.emailAddress,
+  textInputAction: TextInputAction.next,
+  autofillHints: const [AutofillHints.email],
+  decoration: const InputDecoration(
+    labelText: 'Email address',
+    helperText: 'We only use this to sign you in',
+  ),
+  validator: (value) =>
+      (value == null || !value.contains('@')) ? 'Enter a valid email address' : null,
+)
 ```
 
-### ARIA Roles
+### Semantics Toolkit
 
-```html
-<!-- Navigation -->
-<nav aria-label="Main navigation">...</nav>
-<nav aria-label="Footer links">...</nav>
+```dart
+Semantics(header: true, child: Text('Tasks', style: theme.textTheme.titleLarge))   // Heading
 
-<!-- Status messages -->
-<div role="status" aria-live="polite">Task saved</div>
+MergeSemantics(                                                                       // One item, not three
+  child: ListTile(title: Text(task.title), subtitle: Text(task.dueLabel)),
+)
 
-<!-- Alert messages -->
-<div role="alert">Error: Title is required</div>
+Semantics(                                                                            // Status change
+  liveRegion: true,
+  child: Text(saved ? 'Task saved' : ''),
+)
 
-<!-- Modal dialogs -->
-<dialog aria-modal="true" aria-labelledby="dialog-title">
-  <h2 id="dialog-title">Confirm Delete</h2>
-  ...
-</dialog>
+Image.asset('assets/divider.png', excludeFromSemantics: true)                         // Decorative
+Image.network(url, semanticLabel: 'Profile photo of ${user.name}')                    // Meaningful
 
-<!-- Loading states -->
-<div aria-busy="true" aria-label="Loading tasks">
-  <Spinner />
-</div>
+ExcludeSemantics(child: const DecorativeBackground())                                 // Hide noise
+```
+
+### Modal Dialogs
+
+```dart
+// showDialog scopes focus and screen-reader navigation for you
+final confirmed = await showAdaptiveDialog<bool>(
+  context: context,
+  builder: (context) => AlertDialog.adaptive(
+    title: const Text('Delete task?'),
+    content: const Text('This can\'t be undone.'),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+      TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+    ],
+  ),
+);
+```
+
+### Loading States
+
+```dart
+Semantics(
+  label: 'Loading tasks',
+  liveRegion: true,
+  child: const CircularProgressIndicator(),
+)
+// Prefer skeletons for content, and keep an accessible label on whatever you show
 ```
 
 ### Accessible Lists
 
-```html
-<ul role="list" aria-label="Tasks">
-  <li>
-    <input type="checkbox" id="task-1" aria-label="Complete: Buy groceries" />
-    <label htmlFor="task-1">Buy groceries</label>
-  </li>
-</ul>
+```dart
+ListView.builder(
+  itemCount: tasks.length,
+  itemBuilder: (context, i) {
+    final task = tasks[i];
+    return CheckboxListTile(
+      value: task.done,
+      onChanged: (_) => onToggle(task.id),
+      title: Text(task.title),
+      // Screen reader hears the title with its checked state and role
+    );
+  },
+)
+```
+
+### Text Scale and Reduced Motion
+
+```dart
+final scale = MediaQuery.textScalerOf(context);            // Respect it; don't clamp it away
+final reduceMotion = MediaQuery.disableAnimationsOf(context);
+
+AnimatedContainer(
+  duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
+  // ...
+)
 ```
 
 ## Testing Tools
 
-```bash
-# Automated audit
-npx axe-core          # Programmatic accessibility testing
-npx pa11y             # CLI accessibility checker
+```dart
+// Automated guidelines in widget tests
+final handle = tester.ensureSemantics();
+await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+await expectLater(tester, meetsGuideline(textContrastGuideline));
+handle.dispose();
 
-# In browser
-# Chrome DevTools → Lighthouse → Accessibility
-# Chrome DevTools → Elements → Accessibility tree
-
-# Screen reader testing
-# macOS: VoiceOver (Cmd + F5)
-# Windows: NVDA (free) or JAWS
-# Linux: Orca
+// Inspect the semantics tree
+debugDumpSemanticsTree();                                    // Print it
+MaterialApp(showSemanticsDebugger: true, /* ... */)          // Overlay it while running
 ```
 
-## Quick Reference: ARIA Live Regions
+```bash
+# Automated: widget tests with accessibility guidelines
+flutter test
 
-| Value | Behavior | Use For |
-|-------|----------|---------|
-| `aria-live="polite"` | Announced at next pause | Status updates, saved confirmations |
-| `aria-live="assertive"` | Announced immediately | Errors, time-sensitive alerts |
-| `role="status"` | Same as `polite` | Status messages |
-| `role="alert"` | Same as `assertive` | Error messages |
+# On a device or emulator
+# Android: TalkBack (Settings > Accessibility), Accessibility Scanner app, Switch Access, Voice Access
+# iOS: VoiceOver (Settings > Accessibility), Xcode Accessibility Inspector, Voice Control, Dynamic Type
+# Both: largest font size and display size, bold text, reduce motion, dark mode, RTL locale
+```
+
+- **Agent-driven checks:** `mobile_list_elements_on_screen` (mobile-mcp) reads the native accessibility tree. Controls missing from it are invisible to screen readers. See `flutter-devtools-and-device-testing`.
+- Automated checks catch a fraction of issues (roughly a third at best). Always walk the main flows with a screen reader.
+
+## Quick Reference: Announcements and Live Regions
+
+| Mechanism | Behavior | Use For |
+|-----------|----------|---------|
+| `Semantics(liveRegion: true)` | Changes to the region's label or value are announced | Status updates, saved confirmations, validation errors |
+| `SnackBar` | Announced by screen readers when shown | Transient confirmations |
+| Programmatic announcement via `SemanticsService` | Announced on demand (check the current API in your SDK version) | Time-sensitive alerts and results of actions with no visible change |
+| `Semantics(label: ..., button: true)` on a new route | Reading focus lands on the new screen's content | Screen changes |
 
 ## Common Anti-Patterns
 
 | Anti-Pattern | Problem | Fix |
 |---|---|---|
-| `div` as button | Not focusable, no keyboard support | Use `<button>` |
-| Missing `alt` text | Images invisible to screen readers | Add descriptive `alt` |
+| `GestureDetector` as a button | Invisible to screen readers, no keyboard activation | Use `IconButton` / `InkWell` / `TextButton`, or add `Semantics` |
+| `IconButton` with no `tooltip` | Announced as "button" with no description | Add `tooltip` |
+| Missing `semanticLabel` on meaningful images | Images invisible to screen readers | Add a descriptive label, or exclude decorative images |
 | Color-only states | Invisible to color-blind users | Add icons, text, or patterns |
-| Autoplaying media | Disorienting, can't be stopped | Add controls, don't autoplay |
-| Custom dropdown with no ARIA | Unusable by keyboard/screen reader | Use native `<select>` or proper ARIA listbox |
-| Removing focus outlines | Users can't see where they are | Style outlines, don't remove them |
-| Empty links/buttons | "Link" announced with no description | Add text or `aria-label` |
-| `tabindex > 0` | Breaks natural tab order | Use `tabindex="0"` or `-1` only |
+| Touch targets under 48×48 dp | Hard to hit for many users | Pad the tap area (`InkResponse`, `Padding`, `kMinInteractiveDimension`) |
+| Long-press or swipe as the only path | Unusable with assistive tech and for many users | Provide a visible button or custom semantics action |
+| Clamping or ignoring text scale | Low-vision users can't read the app | Fix the layout: `Flexible`, `Wrap`, scrolling; no fixed-height text containers |
+| Placeholder text as the label | Disappears on input, often unread | Use `labelText` |
+| Repeating the visible text in a `Semantics` label | Screen reader reads the text twice | Use `MergeSemantics`, or `excludeSemantics: true` on the inner widget |
+| `ExcludeSemantics` on interactive widgets | Control disappears from the accessibility tree | Exclude only decorative content |
+| Custom dropdown or picker with no semantics | Unusable with a screen reader | Use platform-aware widgets or add proper semantics |
+| Locking orientation without need | Excludes users who mount devices in one orientation | Support both unless the product requires otherwise |
+| Autoplaying animation, video, or audio | Disorienting, can't be stopped | Add controls, respect reduce-motion, don't autoplay with sound |
+| Verifying only in light mode, at default text size | Misses contrast and overflow failures | Check dark mode, 200% text, and small screens |

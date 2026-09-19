@@ -31,9 +31,9 @@ Once all three reports are back, the main agent (not a sub-persona) synthesizes 
 
 1. **Code Quality** — Aggregate Critical/Important findings from `code-reviewer` and any failing tests, lint, or build output. Resolve duplicates between reviewers.
 2. **Security** — Promote any Critical/High `security-auditor` findings to launch blockers. Cross-reference with `code-reviewer`'s security axis.
-3. **Performance** — Pull from `code-reviewer`'s performance axis; cross-check Core Web Vitals if applicable.
-4. **Accessibility** — Verify keyboard nav, screen reader support, contrast (not covered by the three personas — handle directly here, or invoke the accessibility checklist).
-5. **Infrastructure** — Env vars, migrations, monitoring, feature flags. Verify directly.
+3. **Performance** — Pull from `code-reviewer`'s performance axis; cross-check frame times, cold start, and app size against budget (run `/perf-mobile` for a structured audit).
+4. **Accessibility** — Verify TalkBack/VoiceOver labels, touch targets, large text scale, contrast (not covered by the three personas — handle directly here, or invoke the accessibility checklist).
+5. **Store and platform readiness** — Signing and build number, store privacy declarations, permissions, staged/phased rollout, crash reporting and symbols, feature flags and the minimum-version gate, and backend compatibility with old app versions. Verify directly.
 6. **Documentation** — README, ADRs, changelog. Verify directly.
 
 ## Phase C — Decision and rollback
@@ -53,8 +53,8 @@ Produce a single output:
 - [Risk + mitigation]
 
 ### Rollback plan
-- Trigger conditions: [what signals would prompt rollback]
-- Rollback procedure: [exact steps]
+- Trigger conditions: [what signals would prompt halting the rollout or recovery]
+- Recovery procedure: [exact steps: feature flag off, halt the staged rollout, fix-forward build, minimum-version gate]
 - Recovery time objective: [target]
 
 ### Specialist reports (full)

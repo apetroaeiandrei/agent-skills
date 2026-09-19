@@ -11,7 +11,7 @@
         "top_k": 3
       },
       {
-        "prompt": "Help me define the contract between the frontend and the orders service",
+        "prompt": "Help me define the contract between the mobile app and the orders service so old app versions keep working",
         "top_k": 3
       }
     ],
@@ -21,8 +21,8 @@
         "owner": "debugging-and-error-recovery"
       },
       {
-        "prompt": "Make this landing page responsive on mobile",
-        "owner": "frontend-ui-engineering"
+        "prompt": "Make this landing screen adaptive on tablets",
+        "owner": "flutter-ui-engineering"
       }
     ]
   },

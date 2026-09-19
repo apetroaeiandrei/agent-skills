@@ -87,7 +87,7 @@ Before deploy:       shipping-and-launch
 
 Don't load all skills at once — it wastes context. Load skills relevant to the current task:
 
-- Working on UI? Load `frontend-ui-engineering`
+- Working on UI? Load `flutter-ui-engineering`
 - Debugging? Load `debugging-and-error-recovery`
 - Setting up CI? Load `ci-cd-and-automation`
 
@@ -117,7 +117,7 @@ The `agents/` directory contains pre-configured agent personas:
 | `code-reviewer.md` | Five-axis code review |
 | `test-engineer.md` | Test strategy and writing |
 | `security-auditor.md` | Vulnerability detection |
-| `web-performance-auditor.md` | Core Web Vitals & performance audit (via `/webperf`) |
+| `mobile-performance-auditor.md` | Flutter frame, startup, memory & size audit (via `/perf-mobile`) |
 
 Load an agent definition when you need specialized review. For example, ask your coding agent to "review this change using the code-reviewer agent persona" and provide the agent definition.
 
@@ -136,7 +136,7 @@ The `.claude/commands/` directory contains slash commands for Claude Code:
 | `/review` | code-review-and-quality |
 | `/code-simplify` | code-simplification |
 | `/ship` | shipping-and-launch |
-| `/webperf` | web-performance-auditor (specialist agent, web apps only) |
+| `/perf-mobile` | mobile-performance-auditor (specialist agent, Flutter apps only) |
 
 > **Note:** When installed as a Claude Code plugin you may see a warning like
 > _"Default commands/ folder is ignored because the manifest sets 'commands'"_.
@@ -153,7 +153,7 @@ The `references/` directory contains supplementary checklists:
 | `testing-patterns.md` | test-driven-development |
 | `performance-checklist.md` | performance-optimization |
 | `security-checklist.md` | security-and-hardening |
-| `accessibility-checklist.md` | frontend-ui-engineering |
+| `accessibility-checklist.md` | flutter-ui-engineering |
 | `definition-of-done.md` | all skills / every change |
 | `observability-checklist.md` | observability-and-instrumentation |
 | `orchestration-patterns.md` | doubt-driven-development |

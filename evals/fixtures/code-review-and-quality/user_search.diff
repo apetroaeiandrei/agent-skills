@@ -1,0 +1,53 @@
+diff --git a/lib/features/users/view/user_search_page.dart b/lib/features/users/view/user_search_page.dart
+new file mode 100644
+index 0000000..2222222
+--- /dev/null
++++ b/lib/features/users/view/user_search_page.dart
+@@ -0,0 +1,45 @@
++import 'package:flutter/material.dart';
++import 'package:http/http.dart' as http;
++import 'package:shared_preferences/shared_preferences.dart';
++
++class UserSearchPage extends StatefulWidget {
++  const UserSearchPage({super.key});
++
++  @override
++  State<UserSearchPage> createState() => _UserSearchPageState();
++}
++
++class _UserSearchPageState extends State<UserSearchPage> {
++  final _controller = TextEditingController();
++  List<dynamic> _users = [];
++
++  Future<void> _search(String query) async {
++    final prefs = await SharedPreferences.getInstance();
++    final token = prefs.getString('access_token');
++    final response = await http.get(
++      Uri.parse('http://api.example.com/users/search?q=$query'),
++      headers: {'Authorization': 'Bearer $token'},
++    );
++    print('search by ${prefs.getString('email')}: $query -> ${response.body}');
++    setState(() => _users = jsonDecode(response.body)['users']);
++    ScaffoldMessenger.of(context).showSnackBar(
++      SnackBar(content: Text('${_users.length} results')),
++    );
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    return Scaffold(
++      body: Column(
++        children: [
++          TextField(controller: _controller, onChanged: _search),
++          Expanded(
++            child: ListView(
++              children: _users
++                  .map((u) => ListTile(title: Text(u['display_name'])))
++                  .toList(),
++            ),
++          ),
++        ],
++      ),
++    );
++  }
++}

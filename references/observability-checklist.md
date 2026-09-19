@@ -1,11 +1,12 @@
 # Observability Checklist
 
-Quick reference for instrumenting production code. Use alongside the `observability-and-instrumentation` skill.
+Quick reference for instrumenting production code, including Flutter apps running on users' devices and the backends they call. Use alongside the `observability-and-instrumentation` skill.
 
 ## Table of Contents
 
 - [On-Call Questions (Start Here)](#on-call-questions-start-here)
 - [Structured Logging](#structured-logging)
+- [Mobile App Telemetry](#mobile-app-telemetry)
 - [Metrics](#metrics)
 - [Distributed Tracing](#distributed-tracing)
 - [Alerting](#alerting)
@@ -33,6 +34,22 @@ Telemetry without a question is noise. Before instrumenting anything:
 - [ ] External service calls logged with metadata only: endpoint, status, latency, attempt count, sanitized identifiers
 - [ ] Actual log output spot-checked: structured fields, not `[object Object]`
 
+## Mobile App Telemetry
+
+- [ ] Telemetry sits behind one interface (`Telemetry`), so the vendor is swappable, consent and PII rules are enforced in one place, and tests can fake it
+- [ ] Every signal carries app version, build number, flavor, platform, and OS version, plus a session ID and active feature flags
+- [ ] No `print` / `debugPrint` as logging in release code; only `warn`+ and breadcrumbs leave the device
+- [ ] Event, screen, and Cubit names are explicit strings, not `runtimeType` (mangled by `--obfuscate`)
+- [ ] Requests carry a request ID and app version headers, so client reports join to server logs
+- [ ] Crashes captured from every path: `FlutterError.onError`, `PlatformDispatcher.onError`, isolates, `BlocObserver.onError`, native crashes, ANRs/hangs; non-fatal errors recorded with `fatal: false`
+- [ ] Reports include breadcrumbs (explicit names, no state contents) and a pseudonymous user ID
+- [ ] Symbols and mappings (Dart split-debug-info, R8/ProGuard, dSYMs) uploaded per release from CI; a test crash in a release-like build showed a readable stack
+- [ ] Debug builds report to a dev project or not at all
+- [ ] Analytics respects consent and opt-out; events use a bounded, versioned schema with an event ID and timestamps; no PII in fields
+- [ ] Events are queued on disk (bounded), batched, retried with backoff, deduplicated by event ID, and flushed on background, never blocking UI or startup
+- [ ] Telemetry never throws into feature code
+- [ ] Client alerts are scoped to the latest app version; runbooks say how to disable the flag and halt the rollout
+
 ## Metrics
 
 - [ ] **RED** instrumented for every endpoint and every external dependency: Rate, Errors, Duration
@@ -55,7 +72,7 @@ Telemetry without a question is noise. Before instrumenting anything:
 
 ## Alerting
 
-- [ ] Every alert is symptom-based (error rate, p99 latency, queue age) — causes (CPU, disk, restarts) go to dashboards, not pagers
+- [ ] Every alert is symptom-based (crash-free rate of the latest version, new crash on a critical flow, ANR rate, funnel drop, error rate, p99 latency, queue age) — causes (CPU, disk, restarts, one device model) go to dashboards, not pagers
 - [ ] Every alert is actionable; "ignore it, it self-heals" alerts are deleted
 - [ ] Every alert links to a runbook — minimum three lines: what it means, first query to run, escalation path
 - [ ] Thresholds and durations justified by an SLO or historical data, not guesses
@@ -75,6 +92,9 @@ Telemetry without a question is noise. Before instrumenting anything:
 Instrumentation is code; it can be wrong:
 
 - [ ] Forced an error in staging → found it in the logs by correlation ID
+- [ ] Forced a crash and a non-fatal error in a release-like build on a device → arrived tagged with app version, with a readable stack
+- [ ] Went offline, used the feature, reconnected → events flushed once, no duplicates
+- [ ] Turned analytics consent off → nothing was sent
 - [ ] Sent test traffic → metric series appear with expected labels and sane values
 - [ ] Followed one request end-to-end in the tracing UI → no broken spans
 - [ ] An induced failure was diagnosed from telemetry alone, without reading the source
@@ -83,7 +103,7 @@ Instrumentation is code; it can be wrong:
 
 Before a feature ships to production, all of the following are true:
 
-- [ ] Structured logs flowing to the log aggregator
+- [ ] Structured logs flowing to the log aggregator, and app crash and error reports arriving with symbols and version tags
 - [ ] RED metrics visible in dashboards for every new endpoint and dependency
 - [ ] At least one symptom-based alert configured, with runbook, test-fired
 - [ ] A request can be traced across every service it touches

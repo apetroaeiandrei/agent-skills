@@ -8,9 +8,9 @@ This is the agent-skills project — a collection of production-grade engineerin
 
 ```
 skills/       → Core skills (SKILL.md per directory)
-agents/       → Reusable agent personas (code-reviewer, test-engineer, security-auditor, web-performance-auditor)
+agents/       → Reusable agent personas (code-reviewer, test-engineer, security-auditor, mobile-performance-auditor)
 hooks/        → Session lifecycle hooks
-.claude/commands/ → Slash commands (/spec, /plan, /build, /test, /review, /code-simplify, /ship; plus /webperf specialist audit)
+.claude/commands/ → Slash commands (/spec, /plan, /build, /test, /review, /code-simplify, /ship; plus /perf-mobile specialist audit)
 references/   → Supplementary checklists (testing, performance, security, accessibility, observability)
 evals/        → Skill eval cases + framework (see evals/README.md)
 docs/         → Setup guides for different tools
@@ -20,8 +20,8 @@ docs/         → Setup guides for different tools
 
 **Define:** interview-me, idea-refine, spec-driven-development
 **Plan:** planning-and-task-breakdown
-**Build:** incremental-implementation, test-driven-development, context-engineering, source-driven-development, doubt-driven-development, frontend-ui-engineering, api-and-interface-design
-**Verify:** browser-testing-with-devtools, debugging-and-error-recovery
+**Build:** incremental-implementation, test-driven-development, context-engineering, source-driven-development, doubt-driven-development, flutter-ui-engineering, api-and-interface-design
+**Verify:** flutter-devtools-and-device-testing, debugging-and-error-recovery
 **Review:** code-review-and-quality, code-simplification, security-and-hardening, performance-optimization
 **Ship:** git-workflow-and-versioning, ci-cd-and-automation, deprecation-and-migration, documentation-and-adrs, observability-and-instrumentation, shipping-and-launch
 
@@ -33,6 +33,16 @@ docs/         → Setup guides for different tools
 - Every skill has: Overview, When to Use, Process, Common Rationalizations, Red Flags, Verification
 - Shared references are in the root `references/` directory; the emerging convention for self-contained, distributable skills keeps a skill's own references inside `skills/<name>/references/`
 - Supporting files only created when content exceeds 100 lines
+
+## Flutter Fork Conventions
+
+This checkout is a Flutter mobile adaptation of the upstream pack. When editing skills, agents, commands, or references here:
+
+- Examples are Dart and Flutter, not TypeScript or React. Backend examples (API contracts, SQL, caching) may stay in the backend's language, and are labelled as server side
+- State and models use Cubit and freezed (never Equatable); freezed unions are `sealed` and single-constructor models are `abstract`, per the freezed docs. Mention `dart run build_runner build -d` after freezed changes
+- Device work goes through the Dart MCP server and mobile-mcp (see `flutter-devtools-and-device-testing`); do not reintroduce Chrome DevTools or browser workflows
+- Renamed items keep their new names everywhere: `flutter-devtools-and-device-testing`, `flutter-ui-engineering`, `mobile-performance-auditor`, `/perf-mobile`
+- Keep evals and fixtures in step with the skill they belong to, and re-run the validators and `node scripts/run-evals.js` after changing a description, since routing is scored on vocabulary
 
 ## Contributing
 

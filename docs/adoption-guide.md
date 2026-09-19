@@ -57,7 +57,7 @@ Run the lifecycle in order for the project's first real feature:
 | When                                | Load                                                          |
 | ----------------------------------- | ------------------------------------------------------------- |
 | First public API or module boundary | `api-and-interface-design`                                    |
-| First UI work                       | `frontend-ui-engineering` (+ `browser-testing-with-devtools`) |
+| First UI work                       | `flutter-ui-engineering` (+ `flutter-devtools-and-device-testing`) |
 | First CI pipeline                   | `ci-cd-and-automation`                                        |
 | First production deploy             | `observability-and-instrumentation`, `shipping-and-launch`    |
 | Performance requirements appear     | `performance-optimization`                                    |

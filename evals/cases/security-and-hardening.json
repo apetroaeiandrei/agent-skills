@@ -7,11 +7,15 @@
         "top_k": 3
       },
       {
-        "prompt": "Is this login flow safe against the OWASP top ten?",
+        "prompt": "Is this login flow safe against the OWASP mobile top ten?",
         "top_k": 3
       },
       {
         "prompt": "Harden the webhook endpoint that fetches user-supplied URLs",
+        "top_k": 3
+      },
+      {
+        "prompt": "Where should the Flutter app store the auth token, and is our deep link handling safe?",
         "top_k": 3
       },
       {
@@ -40,13 +44,28 @@
       "prompt": "Harden an endpoint that accepts a user-supplied webhook URL and fetches it server-side.",
       "expected_output": "Threat-modeled hardening: allowlisting, private-IP blocking, and validated input with tests",
       "files": [
-        "security-and-hardening"
+        "security-and-hardening/webhook.js",
+        "security-and-hardening/webhook.test.js"
       ],
       "expectations": [
         "Trust boundaries are identified before controls are proposed",
         "SSRF protections cover private and reserved addresses, not just scheme checks",
         "Input validation is enforced at the boundary",
         "No secrets are logged or exposed in errors"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Review and harden how the app stores the session token and calls the login API.",
+      "expected_output": "Threat-modeled mobile hardening: secure token storage, no secrets in the binary, HTTPS only, and no sensitive logging",
+      "files": [
+        "security-and-hardening/auth_repository.dart"
+      ],
+      "expectations": [
+        "Trust boundaries and attacker capabilities (device access, decompiled binary, proxy) are considered before controls are proposed",
+        "Tokens move from SharedPreferences to platform secure storage, and the saved password is removed",
+        "The payment secret key is removed from the app and handled server-side, and the issue of a shipped key is flagged for rotation",
+        "Cleartext HTTP is replaced with HTTPS and no logging of tokens or response bodies remains"
       ]
     }
   ]
