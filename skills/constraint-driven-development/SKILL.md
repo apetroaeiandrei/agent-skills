@@ -1,6 +1,6 @@
 ---
 name: constraint-driven-development
-description: Establishes a project's quality bar as a written contract and stops agents quietly lowering it. Interviews the user on which dimensions matter, supplies sane default thresholds when they have no number in mind, records everything in CONSTRAINTS.md, and watches the diff for a weakened bar — new @ts-ignore or eslint-disable suppressions, skipped or deleted tests, assertions stripped out, unimplemented stubs, thresholds edited down. Use when no quality bar is written down, when the user says "set up constraints" or "define our standards", when the user wants dimensions they care about — accessibility, web performance, coverage — set up as enforced constraints, when an agent keeps silencing checks or skipping tests to get to green, when you need a coverage or performance threshold and don't know what number to pick, or when an agent writes more code than anyone will read.
+description: Establishes a project's quality bar as a written contract and stops agents quietly lowering it. Interviews the user on which dimensions matter, supplies sane default thresholds when they have no number in mind, records everything in CONSTRAINTS.md, and watches the diff for a weakened bar — new `// ignore:` or `eslint-disable` suppressions, skipped or deleted tests, assertions stripped out, unimplemented stubs, thresholds edited down. Use when no quality bar is written down, when the user says "set up constraints" or "define our standards", when the user wants dimensions they care about — accessibility, app performance, coverage — set up as enforced constraints, when an agent keeps silencing checks or skipping tests to get to green, when you need a coverage or performance threshold and don't know what number to pick, or when an agent writes more code than anyone will read.
 ---
 
 # Constraint-Driven Development
@@ -45,10 +45,10 @@ Never ask what you can read. Before the first question, gather:
 
 | What | Where to look |
 |------|---------------|
-| Language and stack | `package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml` |
-| Test runner | dev dependencies, `test` script, existing test files |
-| Existing linters | `eslint.config.*`, `biome.json`, `.ruff.toml` |
-| Coverage today | `coverage/` output, or run the suite once |
+| Language and stack | `pubspec.yaml` (Flutter or pure Dart, SDK constraints), `.fvmrc`; backend: `package.json`, `pyproject.toml`, `go.mod` |
+| Test runner | `flutter_test` / `test` in dev dependencies, `test/` and `integration_test/`, `melos.yaml` |
+| Existing linters | `analysis_options.yaml` (`flutter_lints`, `very_good_analysis`), `dart_code_linter` config |
+| Coverage today | `coverage/lcov.info`, or run `flutter test --coverage` once |
 | CI | `.github/workflows/`, `.gitlab-ci.yml` |
 | Agent harness | `.claude/`, `.codex/`, `AGENTS.md` |
 
@@ -62,12 +62,12 @@ Follow the one-question-at-a-time discipline from `interview-me`, with one chang
 Q1: Beyond the floor, which of these do you want enforced?
     (a) Test coverage on new code
     (b) Security scanning
-    (c) Performance budgets
-    (d) Accessibility
+    (c) Performance budgets (frame times, startup, app size)
+    (d) Accessibility (semantics, touch targets, contrast in widget tests)
     (e) Architecture boundaries
 GUESS: (a) and (b) — you have a test runner already and you're handling user input.
 DEFAULT if unsure: (a) and (b).
-Say what each pick costs: (c) and (d) need a running URL, (e) needs a rules file written.
+Say what each pick costs: (c) needs a device or device farm for frame and startup numbers, (d) needs accessibility guideline tests written, (e) needs a rules file written.
 ```
 
 ```
@@ -101,9 +101,9 @@ Last reviewed: 2026-08-08 by @addy
 
 ## Floor (always enforced, no setup required)
 
-- No new suppression comments: `@ts-ignore`, `eslint-disable`, `# noqa`, `# type: ignore`
-- No unimplemented stubs: `throw new Error("Not implemented")`, empty `catch {}`
-- No skipped or deleted tests without a reason in the commit message
+- No new suppression comments: `// ignore:`, `// ignore_for_file:`, `// coverage:ignore-*` (backend: `@ts-ignore`, `eslint-disable`, `# noqa`)
+- No unimplemented stubs: `throw UnimplementedError()`, empty `catch (_) {}`
+- No skipped or deleted tests (`skip:`, `@Skip`) without a reason in the commit message
 - No secrets in source
 - This file does not get weakened to make a change pass
 
@@ -111,14 +111,15 @@ Last reviewed: 2026-08-08 by @addy
 
 | Dimension | Rule | Checked by | Runs at |
 |-----------|------|-----------|---------|
-| Types | Zero type errors | `tsc --noEmit` | every edit |
-| Lint | Zero errors from our config | `biome check` | every edit |
+| Analysis | Zero analyzer issues (errors, warnings, lints) | `flutter analyze` | every edit |
+| Format | Formatted | `dart format --output=none --set-exit-if-changed .` | every edit |
 | Secrets | No secrets in source | `gitleaks detect --redact` | every edit |
-| Coverage | Changed lines ≥ 80% covered | `vitest run --coverage` + git diff | task end, CI |
-| Security: code | No high findings | `semgrep scan --config p/default` | CI |
+| Coverage | Changed lines ≥ 80% covered | `flutter test --coverage` + git diff | task end, CI |
+| Security: code | No high findings | analyzer lints (app), `semgrep scan --config p/default` (backend) | CI |
 | Security: deps | Nothing at high or above | `osv-scanner scan source -r .` | CI |
-| Accessibility | Zero critical or serious | `axe $PREVIEW_URL --tags wcag2a,wcag2aa,wcag21aa` | preview deploy |
-| Performance | LCP ≤ 2500ms, CLS ≤ 0.1 | `lighthouse $PREVIEW_URL --output=json` | preview deploy |
+| Accessibility | Zero guideline failures (tap target, label, contrast) | `flutter test test/accessibility/` | task end, CI |
+| Performance: frames | p99 frame build and raster ≤ 16.6ms | `flutter drive --profile` timeline on a device | release candidate |
+| Performance: startup | Cold start within budget | `flutter run --profile --trace-startup` | release candidate |
 
 Every row names the command that produces the verdict. A dimension with a
 number and no command in this column is an aspiration, not a constraint.
@@ -128,13 +129,13 @@ number and no command in this column is an aspiration, not a constraint.
 | Metric | Today | Direction |
 |--------|-------|-----------|
 | Project coverage | 62.4% | must not fall |
-| Bundle size (main) | 184 kB | must not grow |
+| App size (Android app bundle) | 18.4 MB | must not grow |
 
 ## Exceptions
 
 | ID | Rule | Path | Reason | Owner | Expires |
 |----|------|------|--------|-------|---------|
-| W1 | `no-explicit-any` | `src/legacy/**` | Rewrite tracked in ENG-441 | @addy | 2026-11-01 |
+| W1 | `avoid_dynamic_calls` | `lib/legacy/**` | Rewrite tracked in ENG-441 | @addy | 2026-11-01 |
 ```
 
 Then add one line to `AGENTS.md` and `CLAUDE.md`: `Read CONSTRAINTS.md before writing code. Do not weaken it to make a change pass.`
@@ -145,43 +146,45 @@ Picking a dimension means installing something. Don't leave the user with a numb
 
 | Dimension | Tool | Install | Run | Gate on |
 |-----------|------|---------|-----|---------|
-| Types (TS) | tsc | already there | `tsc --noEmit` | any error |
-| Types (Python) | mypy | `pip install mypy` | `mypy .` | any error |
-| Lint | your existing config | already there | `eslint .` / `biome check` / `ruff check` | any error |
-| Coverage (JS) | your test runner | already there | `vitest run --coverage` (or `jest --coverage`) | coverage of changed lines |
-| Coverage (Python) | pytest-cov | `pip install pytest-cov` | `pytest --cov --cov-report=lcov` | same |
-| Security: code | Semgrep | `pipx install semgrep` | `semgrep scan --config p/default --config p/owasp-top-ten` | any high finding |
+| Analysis and lint | the Dart analyzer + your `analysis_options.yaml` | already there | `flutter analyze` | any issue |
+| Format | `dart format` | already there | `dart format --output=none --set-exit-if-changed .` | any change needed |
+| Coverage (Dart) | your test runner | already there | `flutter test --coverage` (writes `coverage/lcov.info`) | coverage of changed lines |
+| Accessibility | `flutter_test` guidelines | already there | `flutter test` (tests using `meetsGuideline(...)`) | zero failures |
+| Performance: frames | `integration_test` + `TimelineSummary` | already there | `flutter drive --profile --driver=... --target=...` on a device | p90/p99 frame build and raster budget |
+| Performance: startup | Flutter tooling | already there | `flutter run --profile --trace-startup` | time to first frame budget |
+| Performance: app size | Flutter tooling | already there | `flutter build appbundle --analyze-size` | size budget vs. baseline |
+| Architecture | `import_lint` (or a `custom_lint` rule) | `dart pub add --dev import_lint` | see the package's README | any violation |
+| Assertion quality | a Dart mutation-testing package (optional; tooling is less mature than in JS) | per package | scope to changed files | mutation score |
 | Security: secrets | gitleaks | `brew install gitleaks` | `gitleaks detect --redact --no-banner` | any finding |
-| Security: dependencies | osv-scanner | `brew install osv-scanner` | `osv-scanner scan source -r .` | high or above |
-| Performance: page | Lighthouse | `npm i -D lighthouse` | `lighthouse $URL --output=json --quiet` | LCP, CLS, performance score |
-| Performance: bundle | size-limit | `npm i -D size-limit` | `size-limit --json` | per-entry byte budget |
-| Accessibility | axe-core | `npm i -D @axe-core/cli` | `axe $URL --tags wcag2a,wcag2aa,wcag21aa` | zero critical or serious |
-| Architecture | dependency-cruiser | `npm i -D dependency-cruiser` | `depcruise --validate src` | any violation |
-| Assertion quality | Stryker | `npm i -D @stryker-mutator/core` | `stryker run --mutate <changed files>` | mutation score |
+| Security: dependencies | osv-scanner | `brew install osv-scanner` | `osv-scanner scan source -r .` (reads `pubspec.lock`) | high or above |
+| Security: code (backend) | Semgrep | `pipx install semgrep` | `semgrep scan --config p/default --config p/owasp-top-ten` | any high finding |
+| Types, lint, coverage (backend) | your stack's own tools | already there | `tsc --noEmit`, `eslint .`, `vitest run --coverage`, `mypy .`, `ruff check` | any error / changed-line coverage |
 
 Five things that will bite you if you skip them:
 
 1. **`--redact` on gitleaks is not optional.** Without it the matched secret lands in the agent's transcript, which is how a leaked key ends up in a log, a summary, or a commit message. Report the rule and the location, never the value.
-2. **Lighthouse and axe need a URL.** They only work against a running app, so they belong in the runtime stage against a preview deploy or a local server you start first. If the project has no URL to hit — a CLI, a library, a desktop app — say so and drop the dimension rather than inventing a check that can't run.
-3. **Scope the expensive ones to the diff.** `stryker run --mutate` on the whole repo takes hours and gets turned off; on the files a change touched it takes under a minute. Same for Semgrep, which takes a path list.
+2. **Frame, startup, and integration checks need a device.** They only work against a running app in profile mode, on a real device or a device farm (an emulator is fine for correctness, not for timing). They belong in a runtime stage such as a release-candidate or nightly job, not the edit loop. If the project has no UI or no device to run on — a package, a CLI — say so and drop the dimension rather than inventing a check that can't run.
+3. **Scope the expensive ones to the diff.** Mutation testing on the whole repo takes hours and gets turned off; on the files a change touched it takes under a minute. Same for Semgrep, which takes a path list, and for `flutter test`, which accepts the test files related to what changed.
 4. **Coverage needs no second test run.** Read the lcov your suite already writes and intersect it with `git diff`. Running the suite twice to get a number is the fastest way to make people hate this.
 5. **Semgrep's registry rules are free to run; check the licence before redistributing them.** `opengrep` is a drop-in fork with the same rule format and JSON output if that matters to your legal team.
 
 Add each one to the project's own script so it's reproducible without an agent:
 
-```json
-{
-  "scripts": {
-    "check:fast": "tsc --noEmit && eslint . && gitleaks detect --redact --no-banner",
-    "check:task": "npm run check:fast && vitest run --coverage",
-    "check:full": "npm run check:task && semgrep scan --config p/default && osv-scanner scan source -r ."
-  }
-}
+```makefile
+# Makefile (or melos scripts): the same three tiers for a Flutter project
+check-fast:
+	dart format --output=none --set-exit-if-changed . && flutter analyze && gitleaks detect --redact --no-banner
+
+check-task: check-fast
+	flutter test --coverage
+
+check-full: check-task
+	osv-scanner scan source -r .
 ```
 
 That mapping matters more than the tools. `check:fast` is what runs after an edit, `check:task` when the agent thinks it's done, `check:full` in CI.
 
-The commands now live in two places — the `Checked by` column in `CONSTRAINTS.md` and these scripts. `CONSTRAINTS.md` is the canonical source: it carries the reason alongside each command and it shows up in review. The scripts are convenience wrappers that must mirror it, not a second source of truth; if they drift, the file wins.
+The commands now live in two places — the `Checked by` column in `CONSTRAINTS.md` and these scripts. If freezed or other generated code is committed, `check-fast` should run `dart run build_runner build -d` first, or CI will analyze stale output. `CONSTRAINTS.md` is the canonical source: it carries the reason alongside each command and it shows up in review. The scripts are convenience wrappers that must mirror it, not a second source of truth; if they drift, the file wins.
 
 ### Step 5: Wire it to the lifecycle
 
@@ -206,9 +209,9 @@ Someone will point out that if the agent writes the code and the checks, the che
 Agents don't craft clever loopholes. They hit a red check and take the cheapest road to green. Watch for these five moves in the diff, at review time:
 
 1. **The threshold moved.** A budget lowered, a severity dropped, a check removed from the fast stage. Compare `CONSTRAINTS.md` against its state at the branch point.
-2. **A test got easier.** `.skip` added, a test file deleted, assertions pulled out of tests that stayed.
-3. **A checker got silenced.** New `@ts-ignore` or `eslint-disable`. Four suppressions deserve special attention because they switch off a check you're relying on: `istanbul ignore` drops code from coverage instead of testing it, `Stryker disable` hides a surviving mutant, `nosemgrep` and `gitleaks:allow` do it for security findings.
-4. **Work is unfinished.** A stub that throws, an empty `catch` turning a failure into silence, a `TODO` standing where the implementation should be.
+2. **A test got easier.** `skip:` or `@Skip` added, a test file deleted, a golden regenerated to make a failure go away, assertions pulled out of tests that stayed.
+3. **A checker got silenced.** New `// ignore:` or `// ignore_for_file:` (or `@ts-ignore` / `eslint-disable` in the backend). Four suppressions deserve special attention because they switch off a check you're relying on: `// coverage:ignore-line` (and `-file` / `-start`) drops code from coverage instead of testing it, a mutation-testing disable hides a surviving mutant, `nosemgrep` and `gitleaks:allow` do it for security findings.
+4. **Work is unfinished.** A `throw UnimplementedError()` stub, an empty `catch` turning a failure into silence, a `TODO` standing where the implementation should be.
 5. **An exception appeared.** A new row in the Exceptions table nobody discussed.
 
 None of this needs tooling beyond `git diff`. Tightening the bar should be silent; loosening it should be loud.
@@ -217,7 +220,7 @@ Unlike the numbered dimensions, the floor has no de facto tool of its own, so an
 
 **Not all checks are equally circular.** Rank them by one question: can the agent make this pass by writing code that doesn't work?
 
-- **External** — axe-core encodes WCAG, `osv-scanner` reads a vulnerability database, Lighthouse measures a real browser. The agent can't argue with these.
+- **External** — the analyzer and `flutter_test`'s accessibility guidelines encode platform and WCAG rules, `osv-scanner` reads a vulnerability database, a profile-mode frame timeline measures a real device. The agent can't argue with these.
 - **Project** — your lint rules, your layer boundaries. A human owns the file.
 - **Suite** — your own tests. Most useful, and the only genuinely circular one.
 
@@ -241,9 +244,10 @@ When the user has no opinion, use these. They're chosen to be met by most codeba
 | Project coverage | today's value, must not fall | No argument needed to adopt |
 | Mutation score (if used) | ≥ 60% to start | Typical for a suite never mutated before; 80% is mature |
 | Dependency vulnerabilities | nothing at high or above | Below that is mostly noise |
-| LCP | ≤ 2500 ms | Core Web Vitals "good" threshold |
-| CLS | ≤ 0.1 | Same |
-| Accessibility | zero critical or serious axe violations | Moderate and minor are often debatable |
+| Frame build and raster time (p99, profile mode) | ≤ 16.6ms (8.3ms on 120Hz devices) | One frame at 60Hz; measured on a mid-range device |
+| Cold start | project budget, ratchet from today's value | Android vitals flags 5s or more as slow |
+| App size | today's value, must not grow | No argument needed to adopt |
+| Accessibility | zero guideline failures (tap target, label, contrast) in widget tests | Automated checks catch the mechanical failures |
 | Exception lifetime | 90 days | Long enough to plan the fix, short enough to remember |
 | Ratchet tolerance | 0.5% | Absorbs drift when an unrelated file moves the number |
 
@@ -254,7 +258,7 @@ State the number and the reason together. A threshold without a rationale gets d
 Constraints work at three levels of teeth. Start at the first.
 
 1. **Written only.** `CONSTRAINTS.md` exists and agents read it. Costs nothing, catches the honest mistakes, relies on the agent complying.
-2. **Scripted.** An `npm run check` (or `make check`) that runs the fast checks, wired into your agent's post-edit hook and your CI. Deterministic, no new dependency.
+2. **Scripted.** A `make check` (or melos script) that runs the fast checks, wired into your agent's post-edit hook and your CI. Deterministic, no new dependency.
 3. **Tool-backed.** A dedicated runner that handles diff scoping, budgets, ratchets, and the guard checks. Use when the config outgrows a shell script. The floor-guard reference in [references/floor-guard.md](references/floor-guard.md) is the starting point for the guard-checks half of this.
 
 Most projects should stop at 2. Move to 3 when you're maintaining more than about thirty lines of check-running shell.
