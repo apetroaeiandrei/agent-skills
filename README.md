@@ -281,7 +281,7 @@ The commands above are entry points. The pack includes 25 skills total — 24 li
 | [deprecation-and-migration](skills/deprecation-and-migration/SKILL.md) | Code-as-liability mindset, compulsory vs advisory deprecation, migration patterns, zombie code removal | Removing old systems, migrating users, or sunsetting features |
 | [documentation-and-adrs](skills/documentation-and-adrs/SKILL.md) | Architecture Decision Records, API docs, inline documentation standards - document the *why* | Making architectural decisions, changing APIs, or shipping features |
 | [observability-and-instrumentation](skills/observability-and-instrumentation/SKILL.md) | Structured logging, RED metrics, OpenTelemetry tracing, symptom-based alerting - instrument as you build | Adding telemetry, or shipping anything that runs in production |
-| [shipping-and-launch](skills/shipping-and-launch/SKILL.md) | Pre-launch checklists, feature flag lifecycle, staged rollouts, rollback procedures, monitoring setup | Preparing to deploy to production |
+| [shipping-and-launch](skills/shipping-and-launch/SKILL.md) | Pre-launch and store-readiness checklists, feature flags and kill switches, staged/phased rollouts, recovery plans for apps that can't be recalled, crash monitoring | Preparing an app release for the App Store or Google Play |
 
 ---
 
