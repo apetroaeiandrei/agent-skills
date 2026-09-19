@@ -269,7 +269,7 @@ The commands above are entry points. The pack includes 25 skills total — 24 li
 |-------|-------------|----------|
 | [code-review-and-quality](skills/code-review-and-quality/SKILL.md) | Five-axis review, change sizing (~100 lines), severity labels (Nit/Optional/FYI), review speed norms, splitting strategies | Before merging any change |
 | [code-simplification](skills/code-simplification/SKILL.md) | Chesterton's Fence, Rule of 500, reduce complexity while preserving exact behavior | Code works but is harder to read or maintain than it should be |
-| [security-and-hardening](skills/security-and-hardening/SKILL.md) | OWASP Top 10 prevention, auth patterns, secrets management, dependency auditing, three-tier boundary system | Handling user input, auth, data storage, or external integrations |
+| [security-and-hardening](skills/security-and-hardening/SKILL.md) | OWASP Mobile Top 10 / MASVS, secure storage, auth and biometrics, TLS and pinning, deep links, secrets and binary protections, pub supply chain, backend patterns, three-tier boundary system | Handling user input, auth, token storage, deep links, releases, or external integrations |
 | [performance-optimization](skills/performance-optimization/SKILL.md) | Measure-first approach - Flutter frame/startup/size/memory targets, profile-mode workflows, backend query and cache anti-patterns | Performance requirements exist or you suspect regressions |
 
 ### Ship - Deploy with confidence
