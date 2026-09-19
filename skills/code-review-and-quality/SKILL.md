@@ -1,6 +1,6 @@
 ---
 name: code-review-and-quality
-description: Conducts multi-axis code review. Use before merging any change. Use when reviewing code written by yourself, another agent, or a human. Use when you need to assess code quality across multiple dimensions before it enters the main branch.
+description: Conducts multi-axis code review of Flutter and Dart changes. Use before merging any change. Use when reviewing code written by yourself, another agent, or a human. Use when you need to assess code quality across multiple dimensions, including Flutter-specific concerns like widget rebuilds, async gaps, Cubit state, and platform differences, before it enters the main branch.
 ---
 
 # Code Review and Quality
@@ -32,6 +32,8 @@ Does the code do what it claims to do?
 - Are error paths handled (not just the happy path)?
 - Does it pass all tests? Are the tests actually testing the right things?
 - Are there off-by-one errors, race conditions, or state inconsistencies?
+
+For Flutter changes, also see the Flutter Review Lens below.
 
 ### 2. Readability & Simplicity
 
@@ -69,7 +71,7 @@ For detailed security guidance, see `security-and-hardening`. Does the change in
 - Are secrets kept out of code, logs, and version control?
 - Is authentication/authorization checked where needed?
 - Are SQL queries parameterized (no string concatenation)?
-- Are outputs encoded to prevent XSS?
+- Is untrusted content rendered safely (WebViews, HTML or markdown rendering, deep-link and push payloads)?
 - Are dependencies from trusted sources with no known vulnerabilities?
 - Is data from external sources (APIs, logs, user content, config files) treated as untrusted?
 - Are external data flows validated at system boundaries before use in logic or rendering?
@@ -81,9 +83,48 @@ For detailed profiling and optimization, see `performance-optimization`. Does th
 - Any N+1 query patterns?
 - Any unbounded loops or unconstrained data fetching?
 - Any synchronous operations that should be async?
-- Any unnecessary re-renders in UI components?
+- Any unnecessary widget rebuilds (broad `setState` or `BlocBuilder`, missing `const`)?
 - Any missing pagination on list endpoints?
 - Any large objects created in hot paths?
+
+## Flutter Review Lens
+
+The five axes stay the same. These are the Flutter-specific things a reviewer should look for under each. Use them as prompts, not a second checklist to grind through.
+
+**Correctness**
+- **Async gaps:** is `BuildContext` used after an `await` without a `context.mounted` / `mounted` check? Does a Cubit `emit` after `close()` (`isClosed`)?
+- **Lifecycle:** are controllers, focus nodes, subscriptions, and timers disposed or cancelled? Does the feature survive backgrounding, rotation, and process death?
+- **All states:** are loading, failure, empty, and loaded handled (exhaustive `switch` over the freezed state)? Offline and slow-network behavior?
+- **Data:** are nullable and missing JSON fields handled, and do unknown enum values fall back safely?
+- **Generated code:** if a freezed or JSON class changed, were the generated files regenerated and (if committed) included? Was any generated file hand-edited?
+- **Platforms:** does it behave on both iOS and Android, and on small screens, large text, and dark mode?
+
+**Readability**
+- Widgets extracted as classes rather than `_buildX()` methods; `build()` methods small and shallow
+- No business logic, API calls, or futures created in `build()`
+- Theme tokens (colors, text styles, spacing) instead of literals
+- `const` used where possible
+
+**Architecture**
+- Layering respected: widgets → Cubit → repository → data source. Widgets don't call APIs; Cubits don't hold `BuildContext` or call other Cubits
+- State and models are freezed (not `Equatable`, not hand-written); unions are `sealed`
+- Repository contracts and DTO-vs-domain mapping at the data boundary
+- Plugins wrapped behind an app-owned interface instead of used directly in Cubits or widgets
+- Navigation goes through the router; routes carry IDs, not objects
+- Provider scope is as narrow as it can be
+
+**Security** (details in `security-and-hardening`)
+- Tokens in secure storage, no secrets or LLM keys in the app, no `print` of sensitive data
+- Deep links, push payloads, and platform channel input validated
+- New permissions, manifest or `Info.plist` changes, WebViews, and network security config deliberately reviewed
+
+**Performance** (details in `performance-optimization`)
+- Rebuild scope, lazy lists, image decode sizes, heavy work on the UI isolate, startup work, leaks
+- New packages, assets, and native code weighed against app size
+
+**UI changes also need**
+- Accessibility: semantic labels, 48×48 dp touch targets, text scale, contrast
+- Evidence: screenshots or a recording from **both platforms** (and dark mode), or a golden diff that was reviewed, not blindly updated
 
 ## Structural Remedies
 
@@ -123,7 +164,7 @@ Small, focused changes are easier to review, faster to merge, and safer to deplo
 | **Horizontal** | Create shared code/stubs first, then consumers | Layered architecture |
 | **Vertical** | Break into smaller full-stack slices of the feature | Feature work |
 
-**When large changes are acceptable:** Complete file deletions and automated refactoring where the reviewer only needs to verify intent, not every line.
+**When large changes are acceptable:** Complete file deletions and automated refactoring where the reviewer only needs to verify intent, not every line. Generated files (`*.freezed.dart`, `*.g.dart`), `pubspec.lock` churn, and golden images inflate a diff without adding review burden. Judge the size of the hand-written change, and review the source classes, not the generated output. Regenerated files should match what the generator produces, so verify by regenerating rather than reading them.
 
 **Separate refactoring from feature work.** A change that refactors existing code and adds new behavior is two changes — submit them separately. Small cleanups (variable renaming) can be included at reviewer discretion.
 
@@ -198,7 +239,9 @@ Check the author's verification story:
 - What tests were run?
 - Did the build pass?
 - Was the change tested manually?
-- Are there screenshots for UI changes?
+- Are there screenshots or a recording for UI changes, from both iOS and Android?
+- Did `flutter analyze`, `dart format`, and `flutter test` pass, and was code generation run if models changed?
+- Was it verified on a device or emulator (not only via hot reload)?
 - Is there a before/after comparison?
 ```
 
@@ -240,9 +283,10 @@ Don't leave dead code lying around — it confuses future readers and agents. Bu
 
 ```
 DEAD CODE IDENTIFIED:
-- formatLegacyDate() in src/utils/date.ts — replaced by formatDate()
-- OldTaskCard component in src/components/ — replaced by TaskCard
-- LEGACY_API_URL constant in src/config.ts — no remaining references
+- formatLegacyDate() in lib/utils/date.dart — replaced by formatDate()
+- OldTaskCard widget in lib/features/tasks/widgets/ — replaced by TaskCard
+- legacyApiUrl constant in lib/config.dart — no remaining references
+- An unused package in pubspec.yaml — no remaining imports
 → Safe to remove these?
 ```
 
@@ -282,10 +326,11 @@ Part of code review is dependency review:
 
 **Before adding any dependency:**
 1. Does the existing stack solve this? (Often it does.)
-2. How large is the dependency? (Check bundle impact.)
-3. Is it actively maintained? (Check last commit, open issues.)
-4. Does it have known vulnerabilities? (`npm audit`)
+2. How large is the dependency? (Check app size impact with `--analyze-size`, and whether it adds native code, permissions, or transitive packages.)
+3. Is it actively maintained? (Check the publisher, last release, open issues, and pub points on pub.dev.)
+4. Does it have known vulnerabilities? (Check pub.dev advisories and your SDK's audit tooling.)
 5. What's the license? (Must be compatible with the project.)
+6. Does it work on every platform you ship (iOS, Android), and does it hide behind an interface you own?
 
 **Rule:** Prefer standard library and existing utilities over new dependencies. Every dependency is a liability.
 
@@ -294,10 +339,10 @@ Part of code review is dependency review:
 1. **Read the changelog, not just the version number.** Semver is a promise the maintainer may not have kept — a "patch" can carry a behavioral change. For a major bump, read the migration notes and find what breaks.
 2. **One dependency per change.** Upgrade and merge them individually (or in small related groups). When a bulk bump breaks the build, you've lost which package did it; a single-package change makes the cause obvious and the revert clean.
 3. **Let the tests decide.** The upgrade is verified by a green suite before *and* after, not by "it installed." If coverage around the dependency's behavior is thin, that gap is the real finding — add a test first.
-4. **Mind the transitive graph.** Most installed packages are ones nobody chose directly. Review the lockfile diff, not just `package.json`; a single direct bump can pull in dozens of indirect changes.
+4. **Mind the transitive graph.** Most installed packages are ones nobody chose directly. Review the `pubspec.lock` diff, not just `pubspec.yaml`; a single direct bump can pull in dozens of indirect changes, and a plugin bump can change native code and permissions.
 5. **Keep the lockfile honest.** Commit it, review its diff, and never hand-edit it. The lockfile is the thing that actually pins what ships.
 
-For triaging `npm audit` findings and supply-chain risk (typosquatting, compromised maintainers), follow the `security-and-hardening` skill — this section covers the upgrade *workflow*, that one covers the security verdict.
+For triaging advisories and supply-chain risk (typosquatting, compromised maintainers), follow the `security-and-hardening` skill — this section covers the upgrade *workflow*, that one covers the security verdict.
 
 ## The Review Checklist
 
@@ -336,11 +381,19 @@ For triaging `npm audit` findings and supply-chain risk (typosquatting, compromi
 - [ ] No N+1 patterns
 - [ ] No unbounded operations
 - [ ] Pagination on list endpoints
+- [ ] Rebuild scope is narrow, lists are lazy, images decode at display size, no heavy work on the UI isolate
+
+### Flutter
+- [ ] No `BuildContext` use across async gaps without a mounted check; controllers and subscriptions disposed
+- [ ] Every screen state handled (loading, failure, empty, loaded)
+- [ ] States and models use freezed; code generation run and clean
+- [ ] Layering respected (widgets → Cubit → repository → data source)
+- [ ] Semantics, touch targets, text scale, and dark mode checked; screenshots from both platforms
 
 ### Verification
-- [ ] Tests pass
-- [ ] Build succeeds
-- [ ] Manual verification done (if applicable)
+- [ ] `flutter analyze`, `dart format`, and tests pass
+- [ ] Build succeeds on the affected platforms
+- [ ] Manual verification done on a device or emulator (if applicable)
 
 ### Verdict
 - [ ] **Approve** — Ready to merge
@@ -350,6 +403,8 @@ For triaging `npm audit` findings and supply-chain risk (typosquatting, compromi
 
 - For detailed security review guidance, see `../../references/security-checklist.md`
 - For performance review checks, see `../../references/performance-checklist.md`
+- For running a UI change on a device and gathering evidence, see `flutter-devtools-and-device-testing`
+- For widget, state, and accessibility conventions, see `flutter-ui-engineering`
 
 ## Common Rationalizations
 
@@ -359,6 +414,8 @@ For triaging `npm audit` findings and supply-chain risk (typosquatting, compromi
 | "I wrote it, so I know it's correct" | Authors are blind to their own assumptions. Every change benefits from another set of eyes. |
 | "We'll clean it up later" | Later never comes. The review is the quality gate — use it. Require cleanup before merge, not after. |
 | "AI-generated code is probably fine" | AI code needs more scrutiny, not less. It's confident and plausible, even when wrong. |
+| "I checked it on my simulator" | One platform, one size, one theme is not the review. Ask for both platforms, large text, and a real device where it matters. |
+| "It's generated code, no need to look" | Generated files should match the generator. Check that they were regenerated, and review the source classes that drive them. |
 | "The tests pass, so it's good" | Tests are necessary but not sufficient. They don't catch architecture problems, security issues, or readability concerns. |
 | "The refactor makes it cleaner" | Relocating complexity isn't reducing it. If the reader still holds the same number of concepts, the structure didn't improve — look for the version where branches disappear. |
 | "It's only a small addition to this file" | Small diffs still push files past a healthy size and bolt branches onto unrelated flows. Judge the resulting structure, not the diff size. |
@@ -381,6 +438,10 @@ For triaging `npm audit` findings and supply-chain risk (typosquatting, compromi
 - A bespoke helper that duplicates an existing canonical one, or feature logic placed in a shared module
 - A bulk "bump dependencies" PR with no changelog review and no per-package isolation
 - A lockfile change that's hand-edited, uncommitted, or merged without reviewing its diff
+- `BuildContext` used after an `await`, or controllers and subscriptions never disposed
+- Business logic, API calls, or futures inside widgets or `build()`
+- A UI change with no screenshots and no evidence from both platforms
+- Hand-edited generated files, or a freezed change without regenerated output
 
 ## Verification
 
@@ -391,6 +452,7 @@ After review is complete:
 - [ ] Tests pass
 - [ ] Build succeeds
 - [ ] The verification story is documented (what changed, how it was verified)
-- [ ] Dependency upgrades were reviewed against their changelog, isolated per package, and verified by a green suite with the lockfile diff reviewed
+- [ ] Dependency upgrades were reviewed against their changelog, isolated per package, and verified by a green suite with the `pubspec.lock` diff reviewed
+- [ ] For UI changes, evidence from both platforms exists and accessibility was checked
 
 **Presumptive blockers:** surface and propose the simpler design for each of these; escalate to Required only when the change actively makes structure worse: a refactor that relocates complexity instead of reducing it; a change that pushes a file past the size boundary with no decomposition; feature logic added to a shared module; a near-duplicate of an existing canonical helper; a silent fallback that hides an unclear invariant.
