@@ -11,7 +11,7 @@
         "top_k": 3
       },
       {
-        "prompt": "What alerts should we page on for the new app release?",
+        "prompt": "What alerts should we page on for crashes and errors in this new feature?",
         "top_k": 3
       }
     ],
