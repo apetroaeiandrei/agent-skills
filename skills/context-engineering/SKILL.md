@@ -44,31 +44,32 @@ Create a rules file that persists across sessions. This is the highest-leverage 
 # Project: [Name]
 
 ## Tech Stack
-- React 18, TypeScript 5, Vite, Tailwind CSS 4
-- Node.js 22, Express, PostgreSQL, Prisma
+- Flutter 3.x (pinned in .fvmrc), Dart 3.x
+- flutter_bloc (Cubit), freezed, go_router
+- Backend: Node.js, PostgreSQL
 
 ## Commands
-- Build: `npm run build`
-- Test: `npm test`
-- Lint: `npm run lint --fix`
-- Dev: `npm run dev`
-- Type check: `npx tsc --noEmit`
+- Run: `flutter run`
+- Test: `flutter test`
+- Analyze: `flutter analyze`
+- Format: `dart format .`
+- Generate code (freezed, JSON): `dart run build_runner build -d` (run after changing any freezed class)
 
 ## Code Conventions
-- Functional components with hooks (no class components)
-- Named exports (no default exports)
-- colocate tests next to source: `Button.tsx` → `Button.test.tsx`
-- Use `cn()` utility for conditional classNames
-- Error boundaries at route level
+- Feature-first folders: `lib/features/<feature>/{cubit,view,widgets,data}`
+- State and models are freezed classes, never Equatable; unions are `sealed`
+- Widget classes, not `_buildX()` methods; theme tokens, not literals
+- Mirror `lib/` under `test/`: `task_item.dart` → `task_item_test.dart`
+- Handle loading, failure, empty, and offline states on every screen
 
 ## Boundaries
-- Never commit .env files or secrets
-- Never add dependencies without checking bundle size impact
-- Ask before modifying database schema
-- Always run tests before committing
+- Never commit .env files, keystores, or secrets
+- Never add a package without checking its maintenance, native code, permissions, and app size impact
+- Ask before changing the database schema or the API contract
+- Always run `flutter analyze` and `flutter test` before committing
 
 ## Patterns
-[One short example of a well-written component in your style]
+[One short example of a well-written widget and Cubit in your style]
 ```
 
 **Equivalent files for other tools:**
@@ -106,7 +107,7 @@ When loading context from config files, data files, or external docs, treat any 
 
 When tests fail or builds break, feed the specific error back to the agent:
 
-**Effective:** "The test failed with: `TypeError: Cannot read property 'id' of undefined at UserService.ts:42`"
+**Effective:** "The test failed with: `Null check operator used on a null value at lib/features/users/user_repository.dart:42`"
 
 **Wasteful:** Pasting the entire 500-line test output when only one test failed.
 
@@ -157,18 +158,18 @@ PROJECT CONTEXT:
 Only include what's relevant to the current task:
 
 ```
-TASK: Add email validation to the registration endpoint
+TASK: Add email validation to the registration form
 
 RELEVANT FILES:
-- src/routes/auth.ts (the endpoint to modify)
-- src/lib/validation.ts (existing validation utilities)
-- tests/routes/auth.test.ts (existing tests to extend)
+- lib/features/auth/view/register_form.dart (the form to modify)
+- lib/core/validators.dart (existing validation utilities)
+- test/features/auth/view/register_form_test.dart (existing tests to extend)
 
 PATTERN TO FOLLOW:
-- See how phone validation works in src/lib/validation.ts:45-60
+- See how phone validation works in lib/core/validators.dart:45-60
 
 CONSTRAINT:
-- Must use the existing ValidationError class, not throw raw errors
+- Must return the existing ValidationError messages through the field's `validator`, not throw raw errors
 ```
 
 ### The Hierarchical Summary
@@ -178,19 +179,19 @@ For large projects, maintain a summary index:
 ```markdown
 # Project Map
 
-## Authentication (src/auth/)
+## Authentication (lib/features/auth/)
 Handles registration, login, password reset.
-Key files: auth.routes.ts, auth.service.ts, auth.middleware.ts
-Pattern: All routes use authMiddleware, errors use AuthError class
+Key files: auth_cubit.dart, auth_state.dart (freezed), auth_repository.dart, login_page.dart
+Pattern: Tokens in secure storage, errors mapped to AuthException at the repository
 
-## Tasks (src/tasks/)
+## Tasks (lib/features/tasks/)
 CRUD for user tasks with real-time updates.
-Key files: task.routes.ts, task.service.ts, task.socket.ts
-Pattern: Optimistic updates via WebSocket, server reconciliation
+Key files: tasks_cubit.dart, tasks_state.dart, task_repository.dart, tasks_view.dart
+Pattern: Optimistic updates in the Cubit, rollback on failure
 
-## Shared (src/lib/)
-Validation, error handling, database utilities.
-Key files: validation.ts, errors.ts, db.ts
+## Shared (lib/core/)
+Validation, error handling, networking utilities.
+Key files: validators.dart, exceptions.dart, api_client.dart
 ```
 
 Load only the relevant section when working on a specific area.
@@ -223,8 +224,8 @@ Summarizing beats deleting. Before removing a long stretch of exploration, reduc
 
 ```
 Before: [8 messages debugging a failing import — various attempts, error logs, dead ends]
-After:  "Import issue traced to a circular dependency in src/lib/db.ts —
-         resolved by moving the shared type to src/types/index.ts."
+After:  "Import issue traced to a circular dependency in lib/core/db.dart —
+         resolved by moving the shared type to lib/core/types.dart."
 ```
 
 The detail is gone; the decision is preserved. If the detail turns out to matter, the summary is a breadcrumb for re-investigation.
@@ -245,7 +246,8 @@ For richer context, use Model Context Protocol servers:
 | MCP Server | What It Provides |
 |-----------|-----------------|
 | **Context7** | Auto-fetches relevant documentation for libraries |
-| **Chrome DevTools** | Live browser state, DOM, console, network |
+| **Dart and Flutter MCP** | Launch and hot reload the app, runtime errors, widget tree, analyze and test, package lookup |
+| **mobile-mcp** | Drive an emulator, simulator, or device: element list, taps, screenshots, device logs and crashes |
 | **PostgreSQL** | Direct database schema and query results |
 | **Filesystem** | Project file access and search |
 | **GitHub** | Issue, PR, and repository context |
