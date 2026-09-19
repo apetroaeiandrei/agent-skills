@@ -310,7 +310,7 @@ Quick-reference material that skills pull in when needed:
 | [testing-patterns.md](references/testing-patterns.md) | Test structure, matchers, mocking (mocktail), Cubit, widget, golden, HTTP, and integration test examples, anti-patterns (Flutter/Dart) |
 | [security-checklist.md](references/security-checklist.md) | Pre-commit checks, auth, input validation, headers, CORS, OWASP Top 10 |
 | [performance-checklist.md](references/performance-checklist.md) | Core Web Vitals targets, frontend/backend checklists, measurement commands |
-| [accessibility-checklist.md](references/accessibility-checklist.md) | Keyboard nav, screen readers, visual design, ARIA, testing tools |
+| [accessibility-checklist.md](references/accessibility-checklist.md) | TalkBack and VoiceOver, Semantics, focus and switch access, touch targets, text scaling, forms, testing guidelines |
 | [observability-checklist.md](references/observability-checklist.md) | On-call questions, structured logging, mobile app telemetry, RED/USE metrics, tracing, symptom-based alerting, pre-launch gate |
 | [orchestration-patterns.md](references/orchestration-patterns.md) | Endorsed multi-persona orchestration patterns, anti-patterns, and the "personas don't invoke personas" rule |
 
