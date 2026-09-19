@@ -148,8 +148,8 @@ class TasksView extends StatelessWidget {
     return BlocBuilder<TasksCubit, TasksState>(
       builder: (context, state) => switch (state) {
         TasksLoading() => const TaskListSkeleton(),
-        TasksFailure() => ErrorState(
-            message: 'Failed to load tasks',
+        TasksFailure(:final message) => ErrorState(
+            message: message,
             onRetry: context.read<TasksCubit>().load,
           ),
         TasksLoaded(:final tasks) when tasks.isEmpty =>
@@ -180,12 +180,14 @@ HydratedBloc / persistent storage  → State that must survive app restarts
 **Rules for Cubit/Bloc state:**
 - States are **immutable** and get value equality from **freezed** (see States and Models with Freezed below). Without value equality, every `emit` looks like a change and rebuilds listeners.
 - Model states as a freezed union (a `sealed` class with one constructor per state) so the UI must handle loading, failure, empty, and loaded exhaustively.
+- A failure state carries a **user-facing** message that the View renders. Map exceptions to that message in the Cubit; never put a raw exception, stack trace, or server internal into a state the UI displays (see `security-and-hardening`).
 - Never hold a `BuildContext` in a Cubit, and never call one Cubit from another. Coordinate through the presentation layer (`BlocListener`) or a shared repository stream.
 - Use `context.read` in callbacks and `BlocBuilder` / `BlocSelector` / `context.watch` in `build`. Never `watch` inside callbacks.
 - Use `BlocListener` (not `BlocBuilder`) for side effects: navigation, snackbars, dialogs.
 - Narrow rebuilds with `buildWhen` or `BlocSelector` when the state is large.
 - Provide a Cubit as low in the tree as the widgets that need it. App-wide only for genuinely app-wide state (auth, theme, locale).
 - Close what you own: cancel stream subscriptions and timers in the Cubit's `close()`.
+- **Guard `emit` across an async gap with `isClosed`.** Emitting after `close()` throws `Bad state: Cannot emit new states after calling close`. The usual trigger is the user navigating away while a request is in flight, so error and rollback paths need the check as much as success paths do.
 
 ### States and Models with Freezed
 
@@ -523,7 +525,8 @@ Future<void> toggle(String id) async {
   try {
     await _repository.toggle(id);
   } on Exception {
-    emit(current);   // Roll back on failure
+    if (isClosed) return;   // The user may have navigated away mid-request
+    emit(current);          // Roll back on failure
   }
 }
 ```
@@ -569,7 +572,7 @@ To lock in the result with widget and golden tests, see `test-driven-development
 - Freezed classes edited without re-running `build_runner`, or generated files edited by hand
 - Cubits that hold `BuildContext` or call other Cubits
 - Missing error, loading, or empty states
-- `BuildContext` used after an `await` without a `mounted` check
+- `BuildContext` used after an `await` without a `mounted` check, or a Cubit `emit` after an `await` without an `isClosed` check
 - `GestureDetector` on tappable elements with no `Semantics`, icon-only buttons with no label or tooltip
 - Touch targets under 48×48 dp
 - Fixed-height containers around text, or text scaling clamped to hide overflow

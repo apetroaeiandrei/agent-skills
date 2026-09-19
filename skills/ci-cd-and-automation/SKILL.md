@@ -48,7 +48,7 @@ Pull Request Opened
 │   ↓ pass            │
 │   DEPENDENCY CHECK  │  pubspec.lock committed, advisories triaged
 │   ↓ pass            │
-│   APP SIZE          │  --analyze-size vs. baseline
+│   APP SIZE          │  --analyze-size vs. baseline (its own build; see below)
 └────────────────────┘
     │
     ▼
@@ -61,6 +61,7 @@ Two Flutter-specific rules:
 
 - **Pin the Flutter version** (declare `environment: flutter:` in `pubspec.yaml`, or use FVM's `.fvmrc`) so local machines and CI build with the same SDK. Bump it deliberately in its own PR. For `flutter-version-file: pubspec.yaml` the value must be an **exact** version (`flutter: 3.35.0`); a range like `">=3.35.0 <4.0.0"` — the usual `environment:` idiom — is rejected by the action.
 - **Run code generation in CI.** If generated files (`*.freezed.dart`, `*.g.dart`) are gitignored, CI must generate them before analyzing and testing. If they are committed, add a check that regenerating produces no diff (`git diff --exit-code`).
+- **The app-size gate needs its own build.** `--analyze-size` requires a single ABI on Android and cannot be combined with `--split-debug-info`, so it can't run inside the release job below. Build it separately, compare it against its own baseline, and don't upload the artifact it produces. See `performance-optimization`.
 
 ## GitHub Actions Configuration
 
