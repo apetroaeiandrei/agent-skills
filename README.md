@@ -31,7 +31,7 @@ Skills encode the workflows, quality gates, and best practices that senior engin
 | Prove it works | `/test` | Tests are proof |
 | Set the quality bar | `/constraints` | Decide it once, enforce it everywhere |
 | Review before merge | `/review` | Improve code health |
-| Audit web performance | `/webperf` | Measure before you optimize |
+| Audit mobile performance | `/perf-mobile` | Measure before you optimize |
 | Simplify the code | `/code-simplify` | Clarity over cleverness |
 | Ship to production | `/ship` | Faster is safer |
 
@@ -294,7 +294,7 @@ Pre-configured specialist personas for targeted reviews:
 | [code-reviewer](agents/code-reviewer.md) | Senior Staff Engineer | Five-axis code review with "would a staff engineer approve this?" standard |
 | [test-engineer](agents/test-engineer.md) | QA Specialist | Test strategy, coverage analysis, and the Prove-It pattern |
 | [security-auditor](agents/security-auditor.md) | Security Engineer | Vulnerability detection, threat modeling, OWASP assessment |
-| [web-performance-auditor](agents/web-performance-auditor.md) | Web Performance Engineer | Core Web Vitals audit with Quick/Deep modes and a metric-honesty rule; run it via `/webperf` |
+| [mobile-performance-auditor](agents/mobile-performance-auditor.md) | Mobile Performance Engineer | Flutter frame, startup, memory, size, and battery audit with Quick/Deep modes and a metric-honesty rule; run it via `/perf-mobile` |
 
 See [docs/agents.md](docs/agents.md) for the decision matrix, orchestration rules, and how personas compose with skills and slash commands.
 

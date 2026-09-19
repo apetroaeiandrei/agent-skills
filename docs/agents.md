@@ -7,7 +7,7 @@ Specialist personas that play a single role with a single perspective. Each pers
 | [code-reviewer](../agents/code-reviewer.md) | Senior Staff Engineer | Five-axis review before merge |
 | [security-auditor](../agents/security-auditor.md) | Security Engineer | Vulnerability detection, OWASP-style audit |
 | [test-engineer](../agents/test-engineer.md) | QA Engineer | Test strategy, coverage analysis, Prove-It pattern |
-| [web-performance-auditor](../agents/web-performance-auditor.md) | Web Performance Engineer | Core Web Vitals audit, loading/rendering/network analysis |
+| [mobile-performance-auditor](../agents/mobile-performance-auditor.md) | Mobile Performance Engineer | Frame rendering, startup, memory, app size, and battery analysis for Flutter apps |
 
 ## How personas relate to skills and commands
 
@@ -29,14 +29,14 @@ Pick this when you want one perspective on the current change and the user is in
 - "Review this PR" → invoke `code-reviewer` directly
 - "Are there security issues in `auth.ts`?" → invoke `security-auditor` directly
 - "What tests are missing for the checkout flow?" → invoke `test-engineer` directly
-- "Audit Core Web Vitals on the product page" → invoke `web-performance-auditor` directly
+- "Audit scrolling jank and startup time on the feed screen" → invoke `mobile-performance-auditor` directly
 
 ### Slash command (single persona behind it)
 Pick this when there's a repeatable workflow you'd otherwise re-explain every time.
 
 - `/review` → wraps `code-reviewer` with the project's review skill
 - `/test` → wraps `test-engineer` with TDD skill
-- `/webperf` → wraps `web-performance-auditor` for performance-focused audits on web apps
+- `/perf-mobile` → wraps `mobile-performance-auditor` for performance-focused audits on Flutter apps
 
 ### Slash command (orchestrator — fan-out)
 Pick this only when **independent** investigations can run in parallel and produce reports that a single agent then merges.
