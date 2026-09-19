@@ -1,69 +1,99 @@
 # Security Checklist
 
-Quick reference for web application security. Use alongside the `security-and-hardening` skill.
+Quick reference for Flutter mobile app security and the backend it talks to. Use alongside the `security-and-hardening` skill.
 
 ## Table of Contents
 
 - [Threat Modeling (Start Here)](#threat-modeling-start-here)
 - [Pre-Commit Checks](#pre-commit-checks)
-- [Authentication](#authentication)
+- [Authentication and Sessions](#authentication-and-sessions)
 - [Authorization](#authorization)
+- [Secure Storage](#secure-storage)
+- [Secure Communication](#secure-communication)
 - [Input Validation](#input-validation)
-- [Security Headers](#security-headers)
-- [CORS Configuration](#cors-configuration)
-- [Data Protection](#data-protection)
+- [Platform Configuration and Permissions](#platform-configuration-and-permissions)
+- [Secrets and Binary Protections](#secrets-and-binary-protections)
+- [Data Protection and Privacy](#data-protection-and-privacy)
 - [Dependency Security](#dependency-security)
 - [AI / LLM Security](#ai--llm-security)
 - [Error Handling](#error-handling)
-- [OWASP Top 10 Quick Reference](#owasp-top-10-quick-reference)
+- [OWASP Mobile Top 10 Quick Reference](#owasp-mobile-top-10-quick-reference)
+- [OWASP Top 10 Quick Reference (Backend/API)](#owasp-top-10-quick-reference-backendapi)
 - [OWASP Top 10 for LLMs Quick Reference](#owasp-top-10-for-llms-quick-reference)
 
 ## Threat Modeling (Start Here)
 
-Before reaching for controls, spend five minutes thinking like an attacker:
+Before reaching for controls, spend five minutes thinking like an attacker. On mobile, **assume the client is in the attacker's hands**: they can decompile your app, intercept its traffic, and read its storage on a lost or rooted device.
 
-- [ ] Trust boundaries mapped (requests, uploads, webhooks, third-party APIs, LLM output, and local values written by processes you don't control)
-- [ ] Assets named (credentials, PII, payment data, admin actions, money movement)
+- [ ] Trust boundaries mapped (API requests and responses, deep links and app links, push payloads, platform channel messages, WebView content, the clipboard, uploads, webhooks, third-party APIs and SDKs, LLM output, and local values written by processes you don't control)
+- [ ] Attacker capabilities assumed: physical access to a device, a rooted or jailbroken device, a decompiled or instrumented app, a proxy on the network path, other apps competing for your URL schemes
+- [ ] Assets named (credentials, tokens, PII, payment data, admin actions, money movement)
 - [ ] STRIDE run per boundary (Spoofing, Tampering, Repudiation, Info disclosure, DoS, Elevation)
 - [ ] Abuse cases written next to use cases ("how would I misuse this?")
 
 ## Pre-Commit Checks
 
-- [ ] No secrets in code (`git diff --cached | grep -i "password\|secret\|api_key\|token"`)
-- [ ] `.gitignore` covers: `.env`, `.env.local`, `*.pem`, `*.key`
-- [ ] `.env.example` uses placeholder values (not real secrets)
+- [ ] No secrets in code (`git diff --cached | grep -i "password\|secret\|api_key\|token\|BEGIN .* PRIVATE KEY"`)
+- [ ] `.gitignore` covers: `.env`, `.env.local`, `*.pem`, `*.key`, `*.jks`, `*.keystore`, `key.properties`, `*.p8`, and any `--dart-define-from-file` config holding non-public values
+- [ ] `.env.example` and committed config use placeholder or public values only
+- [ ] Generated files and `pubspec.lock` follow the project convention, and changes to `pubspec.lock` were reviewed
 
-## Authentication
+## Authentication and Sessions
 
-- [ ] Passwords hashed with bcrypt (≥12 rounds), scrypt, or argon2
-- [ ] Session cookies: `httpOnly`, `secure`, `sameSite: 'lax'`
-- [ ] Session expiration configured (reasonable max-age)
-- [ ] Rate limiting on login endpoint (≤10 attempts per 15 minutes)
+- [ ] Passwords hashed **on the server** with bcrypt (≥12 rounds), scrypt, or argon2; the user's password is never stored on the device
+- [ ] Access tokens short-lived; refresh tokens rotate and can be revoked server-side
+- [ ] Tokens stored in platform secure storage (Keychain/Keystore), never `SharedPreferences` or plain files
+- [ ] Token refresh handled in one place (an interceptor), so concurrent 401s cause one refresh
+- [ ] OAuth/OIDC uses the authorization-code flow with PKCE in the system browser, no embedded WebView, no client secret in the app
+- [ ] Biometrics (`local_auth`) treated as a convenience gate, not proof of identity; sensitive actions verified server-side
+- [ ] Root/jailbreak detection and attestation (Play Integrity, App Attest) treated as server-evaluated signals, not client gates
+- [ ] Logout wipes secure storage, caches, and local databases
+- [ ] Rate limiting on the login endpoint (≤10 attempts per 15 minutes), enforced on the server
 - [ ] Password reset tokens: time-limited (≤1 hour), single-use
 - [ ] Account lockout after repeated failures (optional, with notification)
 - [ ] MFA supported for sensitive operations (optional but recommended)
 
 ## Authorization
 
+- [ ] **Authorization is enforced on the server.** Hidden buttons and client route guards are UX, not security
 - [ ] Every protected endpoint checks authentication
 - [ ] Every resource access checks ownership/role (prevents IDOR)
 - [ ] Admin endpoints require admin role verification
-- [ ] API keys scoped to minimum necessary permissions
-- [ ] JWT tokens validated (signature, expiration, issuer)
+- [ ] API keys scoped to minimum necessary permissions; keys shipped in the app restricted by bundle ID / package name / signing certificate in the provider's console
+- [ ] JWT tokens validated on the server (signature, expiration, issuer)
+
+## Secure Storage
+
+- [ ] Tokens and secrets use `flutter_secure_storage` (Keychain/Keystore-backed); Keychain accessibility level chosen deliberately, with `*_this_device` variants for device-bound secrets
+- [ ] Sensitive local databases encrypted; all local queries use bound parameters
+- [ ] Android backups disabled or excluded for sensitive data (`android:allowBackup="false"` or backup rules); sensitive iOS files excluded from backup
+- [ ] Sensitive screens hidden in the app switcher; screenshots blocked where the data warrants it
+- [ ] Nothing sensitive in logs, the clipboard, notifications, or analytics
+- [ ] Only the data you need is persisted; access tokens kept in memory where possible
+
+## Secure Communication
+
+- [ ] HTTPS only: Android `usesCleartextTraffic="false"` / network security config with `cleartextTrafficPermitted="false"`; iOS never sets `NSAllowsArbitraryLoads`
+- [ ] No `badCertificateCallback` that accepts every certificate, and no permissive `HttpOverrides`, in any build that ships
+- [ ] Debug-only trust anchors live in `<debug-overrides>` (Android) and never in release
+- [ ] Certificate pinning decision recorded; if pinned: public key or intermediate CA pinned (not only the leaf), a backup pin shipped, a rotation plan and a way to update pins exist
+- [ ] Verified with an intercepting proxy on a test device: pinned traffic fails, and unpinned traffic shows nothing beyond the API contract
 
 ## Input Validation
 
-- [ ] All user input validated at system boundaries (API routes, form handlers)
+- [ ] All external input validated at system boundaries: API responses and routes, deep links, push payloads, platform channel messages, WebView messages
+- [ ] Deep-link parameters validated in the router before any screen or Cubit sees them; sensitive actions never executed directly from a link
+- [ ] Verified app links (Android) and universal links (iOS) preferred over custom URL schemes
+- [ ] API responses parsed into typed models; malformed data handled without crashing; unknown enum values fall back safely
 - [ ] Validation uses allowlists (not denylists)
-- [ ] String lengths constrained (min/max)
-- [ ] Numeric ranges validated
+- [ ] String lengths constrained (min/max) and numeric ranges validated
 - [ ] Email, URL, and date formats validated with proper libraries
-- [ ] File uploads: type restricted, size limited, content verified
-- [ ] SQL queries parameterized (no string concatenation)
-- [ ] HTML output encoded (use framework auto-escaping)
-- [ ] URLs validated before redirect (prevent open redirect)
+- [ ] File uploads: type restricted, size limited, content verified (enforced on the server)
+- [ ] SQL queries parameterized, on the server and in the on-device database
+- [ ] WebViews: JavaScript disabled unless required, navigation allowlisted, no untrusted URLs, no sensitive JavaScript channels, no tokens injected into web content
+- [ ] URLs validated before redirect (prevent open redirect, including `?next=` parameters)
 - [ ] Server-side URL fetches allowlisted; private/reserved IPs blocked (prevent SSRF)
-- [ ] Destructive path operations (delete/move/overwrite): symlinks resolved, allowlisted root, minimum depth, ownership evidence read before the call
+- [ ] Destructive path operations (delete/move/overwrite), on the server or on the device: symlinks resolved, allowlisted root, minimum depth, ownership evidence read before the call
 
 ### Destructive Path Operations
 
@@ -104,42 +134,76 @@ What this does not do, and must be said where the snippet is copied from:
   ancestor between the check and the call, operate on a descriptor with no-follow,
   beneath-the-root semantics, or guarantee the hierarchy is immutable for the duration.
 
-## Security Headers
+The same containment applies to on-device file operations, such as cache cleanup and
+export or import of user files. In Dart, resolve symlinks first and compare against
+resolved roots. On iOS, for example, `/var` is a symlink to `/private/var`, so an
+unresolved root will never match a resolved target:
 
-```
-Content-Security-Policy: default-src 'self'; script-src 'self'
-Strict-Transport-Security: max-age=31536000; includeSubDomains
-X-Content-Type-Options: nosniff
-X-Frame-Options: DENY
-X-XSS-Protection: 0  (disabled, rely on CSP)
-Referrer-Policy: strict-origin-when-cross-origin
-Permissions-Policy: camera=(), microphone=(), geolocation=()
-```
+```dart
+import 'dart:io';
+import 'package:path/path.dart' as p;
 
-## CORS Configuration
-
-```typescript
-// Restrictive (recommended)
-cors({
-  origin: ['https://yourdomain.com', 'https://app.yourdomain.com'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-})
-
-// NEVER use in production:
-cors({ origin: '*' })  // Allows any origin
+Future<Directory> resolveDeletable(String candidate, Set<String> allowedRoots) async {
+  final target = await Directory(candidate).resolveSymbolicLinks();   // BEFORE the check
+  final roots = [for (final r in allowedRoots) await Directory(r).resolveSymbolicLinks()];
+  // isWithin is false when the target equals the root, so a root is never the target
+  if (!roots.any((root) => p.isWithin(root, target))) {
+    throw StateError('refusing: outside allowed roots ($target)');
+  }
+  return Directory(target);
+}
 ```
 
-## Data Protection
+The same limits apply: an in-tree marker is self-attestation, and resolving a path then
+operating on the *name* is a check/use race wherever an untrusted process can swap an
+ancestor.
+
+## Platform Configuration and Permissions
+
+- [ ] Merged Android manifest of the **release** build reviewed (plugins add permissions and components): not `android:debuggable`, `android:allowBackup` deliberate, every component has an explicit `android:exported`, permissions minimal
+- [ ] `Info.plist` contains only the usage-description keys in use, with accurate purpose strings; privacy manifest (`PrivacyInfo.xcprivacy`) matches SDK behavior
+- [ ] Permissions requested at the moment of use with a rationale; denial and "don't ask again" handled gracefully; unused permissions removed
+- [ ] New URL schemes, intent filters, and app links reviewed for hijacking and exposure
+- [ ] No `flutter_driver` extension, dev menus, debug banners, or verbose logging reachable in release builds
+- [ ] Backend-as-a-service rules (Firestore, Storage, and so on) locked down by default and tested
+
+## Secrets and Binary Protections
+
+- [ ] No real secrets in the app: assume every string in the binary is readable, including `--dart-define` values
+- [ ] Only public, low-privilege identifiers ship in the app; privileged keys (payments, LLMs, admin) live on the server behind authentication and rate limits
+- [ ] Keys that must ship are restricted in the provider's console (bundle ID, package name, signing certificate)
+- [ ] Release builds obfuscated: `--obfuscate --split-debug-info=build/symbols`; symbols kept out of the artifact and stored for de-obfuscation
+- [ ] Obfuscation treated as a speed bump, not a control: sensitive logic and checks enforced server-side
+- [ ] Signing keys, keystores, `key.properties`, and `.p8` keys held in the CI secret store, never in the repository
+- [ ] Cryptography uses vetted libraries and authenticated encryption; no hard-coded keys, salts, or IVs; `Random.secure()` for randomness
+
+## Data Protection and Privacy
 
 - [ ] Sensitive fields excluded from API responses (`passwordHash`, `resetToken`, etc.)
-- [ ] Sensitive data not logged (passwords, tokens, full CC numbers)
-- [ ] PII encrypted at rest (if required by regulation)
+- [ ] Sensitive data not logged (passwords, tokens, full CC numbers), including `print` / `debugPrint` in release code
+- [ ] PII encrypted at rest (if required by regulation), on the device and on the server
 - [ ] HTTPS for all external communication
 - [ ] Database backups encrypted
+- [ ] Personal data classified, collected against a stated purpose, minimized, with a retention limit
+- [ ] Analytics and third-party SDK data sharing gated on consent; store privacy declarations (App Privacy labels, Play Data safety) match actual collection
+- [ ] In-app account deletion works end to end (server data, backups, analytics copies)
 
 ## Dependency Security
+
+### Dart and Flutter (the app)
+
+- [ ] `pubspec.lock` committed for the app, and CI installs from it (`flutter pub get --enforce-lockfile`; confirm your SDK supports the flag)
+- [ ] Advisories triaged by reachability (pub.dev advisories, your SDK's audit command if it has one); deferrals have a reason and a review date
+- [ ] New dependencies vetted: publisher (prefer verified), maintenance, release age, popularity and pub points, license, transitive graph, lookalike names
+- [ ] Plugins' native code reviewed: Gradle and CocoaPods build files, requested permissions, bundled binaries, and manifest changes merged into yours
+- [ ] `git:` and `path:` dependencies pinned to a commit and justified
+- [ ] Third-party SDKs (analytics, ads, payments, crash reporting) approved as a security *and* privacy decision
+- [ ] `dev_dependencies` kept out of the runtime graph; unused packages removed
+- [ ] Flutter SDK version pinned and upgraded deliberately
+
+### Backend and Tooling Repositories (JavaScript)
+
+The matrices below apply to the backend or any Node tooling repository, and are kept here for that use.
 
 First locate the **installation boundary**. If the package is matched by a parent `workspaces` declaration, use that workspace root; otherwise use the nearest project root that owns both its manifest and dependency graph. At that boundary, corroborate `packageManager` (when present), the lockfile, and CI commands. Stop if they disagree or competing manager lockfiles exist there. A nested project is independent only when it is outside the parent workspace; independent subprojects may legitimately use different managers.
 
@@ -190,7 +254,8 @@ Authoritative checks: [npm install-scripts](https://docs.npmjs.com/cli/v11/comma
 
 For any feature that calls an LLM (chatbots, summarizers, agents, RAG):
 
-- [ ] Model output treated as untrusted — never into `eval`/SQL/shell/`innerHTML`/file paths
+- [ ] Model output treated as untrusted — never into `eval`/SQL/shell/WebView HTML/file paths
+- [ ] **No LLM API key in the app**: calls go through your backend, which holds the key, authenticates the user, and rate-limits
 - [ ] Prompt injection assumed; permissions enforced in code, not in the system prompt
 - [ ] Secrets, cross-tenant data, and full system prompts kept out of the context window
 - [ ] Tool/agent permissions scoped; destructive or irreversible actions require confirmation
@@ -199,7 +264,7 @@ For any feature that calls an LLM (chatbots, summarizers, agents, RAG):
 ## Error Handling
 
 ```typescript
-// Production: generic error, no internals
+// Server, production: generic error, no internals
 res.status(500).json({
   error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' }
 });
@@ -212,7 +277,37 @@ res.status(500).json({
 });
 ```
 
-## OWASP Top 10 Quick Reference
+```dart
+// App: show a friendly message, report the detail, never show stack traces to users
+ErrorWidget.builder = (details) => const ErrorFallback();          // Release builds
+FlutterError.onError = (details) => telemetry.recordError(         // Report without PII
+  details.exception,
+  details.stack ?? StackTrace.current,
+  fatal: true,
+);
+```
+
+- [ ] Users never see stack traces or raw server errors
+- [ ] Error reports carry no tokens, PII, or full request/response bodies
+
+## OWASP Mobile Top 10 Quick Reference
+
+The 2024 list. Use the [OWASP MASVS](https://mas.owasp.org/MASVS/) as the verification standard.
+
+| # | Risk | Prevention |
+|---|---|---|
+| M1 | Improper Credential Usage | No secrets in the app or repo; secure storage; short-lived, revocable tokens |
+| M2 | Inadequate Supply Chain Security | Committed `pubspec.lock`, vetted packages and SDKs, review native plugin code |
+| M3 | Insecure Authentication/Authorization | Server-side enforcement; PKCE OAuth; biometrics as a gate only |
+| M4 | Insufficient Input/Output Validation | Validate deep links, push, channels, WebView, and API responses; typed models |
+| M5 | Insecure Communication | HTTPS only, no cert-validation bypass, considered pinning |
+| M6 | Inadequate Privacy Controls | Minimize data, consent, accurate store declarations, account deletion |
+| M7 | Insufficient Binary Protections | Obfuscation, no client-side-only checks, server-side attestation signals |
+| M8 | Security Misconfiguration | Reviewed manifests and plists, explicit `exported`, no debug surface in release |
+| M9 | Insecure Data Storage | Keychain/Keystore, encrypted DBs, backups excluded, no sensitive logs |
+| M10 | Insufficient Cryptography | Vetted libraries, authenticated encryption, `Random.secure()`, no hard-coded keys |
+
+## OWASP Top 10 Quick Reference (Backend/API)
 
 | # | Vulnerability | Prevention |
 |---|---|---|
@@ -221,7 +316,7 @@ res.status(500).json({
 | 3 | Injection | Parameterized queries, input validation |
 | 4 | Insecure Design | Threat modeling, spec-driven development |
 | 5 | Security Misconfiguration | Security headers, minimal permissions, audit deps |
-| 6 | Vulnerable Components | The ecosystem's dependency audit (`npm audit`, `pip-audit`, ...), keep deps updated, minimal deps |
+| 6 | Vulnerable Components | Dependency audits for the app (pub advisories) and the backend (`npm audit`, `pip-audit`, ...), keep deps updated, minimal deps |
 | 7 | Auth Failures | Strong passwords, rate limiting, session management |
 | 8 | Data Integrity Failures | Verify updates/dependencies, signed artifacts |
 | 9 | Logging Failures | Log security events, don't log secrets |
