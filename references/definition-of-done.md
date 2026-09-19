@@ -20,7 +20,7 @@ Apply this to every change before declaring it done.
 
 ### Correctness
 - [ ] All acceptance criteria for the task are met
-- [ ] Code runs and behaves as intended, verified at runtime, not just compiled or typechecked
+- [ ] Code runs and behaves as intended, verified at runtime on an emulator or device, not just compiled or analyzed (hot reload alone doesn't count)
 - [ ] New behavior is covered by tests that fail without the change and pass with it
 - [ ] Existing tests still pass; no regressions introduced
 - [ ] Edge cases and error paths are handled, not just the happy path
@@ -30,9 +30,17 @@ Apply this to every change before declaring it done.
 - [ ] No duplicated business logic
 - [ ] No dead code, debug output, or commented-out blocks left behind
 - [ ] Changes are scoped to the task; no unrelated refactors snuck in
-- [ ] Linting and formatting pass
+- [ ] `flutter analyze` and `dart format` pass, and generated code (freezed, JSON) is regenerated
 
 The depth behind these items lives in `code-review-and-quality` (the five-axis review) and `code-simplification` (reducing complexity without changing behavior).
+
+### Mobile
+- [ ] Verified on both iOS and Android where both ship, and on a real device for anything involving performance, permissions, or plugins
+- [ ] Every screen state is handled: loading, failure, empty, and offline
+- [ ] Accessibility checked: TalkBack and VoiceOver labels, 48×48 dp touch targets, large text, dark mode (see `accessibility-checklist.md`)
+- [ ] Layout holds on small phones and tablets, and in landscape
+- [ ] Backend and API changes still work for app versions in the wild; on-device data migrations tested from supported versions
+- [ ] New permissions, SDKs, and manifest or `Info.plist` changes reviewed for security and privacy
 
 ### Integration
 - [ ] Change works with the rest of the system, not just in isolation
@@ -47,7 +55,7 @@ The depth behind these items lives in `code-review-and-quality` (the five-axis r
 ### Ship-readiness
 - [ ] Security implications reviewed for any untrusted input, auth, or data handling (see `security-and-hardening`)
 - [ ] Observability in place for new critical paths (logs, metrics, traces) (see `observability-and-instrumentation`)
-- [ ] Rollback path exists for anything risky (see `shipping-and-launch`)
+- [ ] Recovery path exists for anything risky: feature flag kill switch, staged rollout you can halt, fix-forward plan (see `shipping-and-launch`)
 - [ ] The human has reviewed and approved before merge or deploy
 
 ## How to Apply
