@@ -1,88 +1,130 @@
 # Performance Checklist
 
-Quick reference checklist for web application performance. Use alongside the `performance-optimization` skill.
+Quick reference checklist for Flutter app performance and the backend it calls. Use alongside the `performance-optimization` skill, and the `mobile-performance-auditor` for a structured audit (`/perf-mobile`).
 
 ## Table of Contents
 
-- [Core Web Vitals Targets](#core-web-vitals-targets)
-- [TTFB Diagnosis](#ttfb-diagnosis)
-- [Frontend Checklist](#frontend-checklist)
+- [Mobile Performance Targets](#mobile-performance-targets)
+- [Startup Diagnosis](#startup-diagnosis)
+- [Flutter App Checklist](#flutter-app-checklist)
 - [Backend Checklist](#backend-checklist)
 - [Caching Strategies](#caching-strategies)
 - [Measurement Commands](#measurement-commands)
 - [Common Anti-Patterns](#common-anti-patterns)
 
-## Core Web Vitals Targets
+## Mobile Performance Targets
 
-| Metric | Good | Needs Work | Poor |
-|--------|------|------------|------|
-| LCP (Largest Contentful Paint) | ≤ 2.5s | ≤ 4.0s | > 4.0s |
-| INP (Interaction to Next Paint) | ≤ 200ms | ≤ 500ms | > 500ms |
-| CLS (Cumulative Layout Shift) | ≤ 0.1 | ≤ 0.25 | > 0.25 |
+Defaults. A project's own budget overrides them. **Measure in profile mode on a real, mid-range device**, never in debug mode or on an emulator.
 
-## TTFB Diagnosis
+| Metric | Target | Notes |
+|--------|--------|-------|
+| Frame build time (UI thread) | ≤ 16.6ms at 60Hz, ≤ 8.3ms at 120Hz | p90 and p99, not the average |
+| Frame raster time (raster thread) | Same budget | Painting, clips, shaders, `saveLayer` |
+| Frozen frames | None (a frame over 700ms) | Reported by Android vitals |
+| Cold start (time to first frame) | Project budget | Android vitals flags 5s or more as slow |
+| Memory | No sustained growth across repeated navigation | Growth means a leak |
+| App size | Project budget, tracked per release | Download and install size |
+| Crash / ANR rate | Below platform bad-behavior thresholds | Play vitals, Xcode Organizer |
+| API response time | < 200ms (p95) | Server side |
 
-When TTFB is slow (> 800ms), check each component in DevTools Network waterfall:
+## Startup Diagnosis
 
-- [ ] **DNS resolution** slow → add `<link rel="dns-prefetch">` or `<link rel="preconnect">` for known origins
-- [ ] **TCP/TLS handshake** slow → enable HTTP/2, consider edge deployment, verify keep-alive
-- [ ] **Server processing** slow → profile backend, check slow queries, add caching
+When cold start is slow, split it into its components (`flutter run --profile --trace-startup` writes `build/start_up_info.json`):
 
-## Frontend Checklist
+- [ ] **Before the framework is up** (process start, engine init) slow → check native splash, plugin registration, and heavy native initializers
+- [ ] **Framework init to first frame** slow → profile your code in `main()` and the first screen's `build()`
+- [ ] **Work before `runApp`** → parallelize with `Future.wait`, defer what the first screen doesn't need
+- [ ] **First screen blocked on network** → render a useful state first, then load
+- [ ] **Large assets or JSON** loaded synchronously at startup → load lazily or off the UI isolate
+- [ ] **SDK initialization** (analytics, crash reporting, remote config, DI) awaited serially → parallelize or defer
+- [ ] **Cubits/Blocs created eagerly** at launch → create lazily where the feature is opened
 
-### Images
-- [ ] Images use modern formats (WebP, AVIF)
-- [ ] Images are responsively sized (`srcset` and `sizes`)
-- [ ] Images and `<source>` elements have explicit `width` and `height` (prevents CLS in art direction)
-- [ ] Below-the-fold images use `loading="lazy"` and `decoding="async"`
-- [ ] Hero/LCP images use `fetchpriority="high"` and no lazy loading
+## Flutter App Checklist
 
-### JavaScript
-- [ ] Bundle size under 200KB gzipped (initial load)
-- [ ] Code splitting with dynamic `import()` for routes and heavy features
-- [ ] Tree shaking enabled (verify dependency ships ESM and marks `sideEffects: false`)
-- [ ] No blocking JavaScript in `<head>` (use `defer` or `async`)
-- [ ] Heavy computation offloaded to Web Workers (if applicable)
-- [ ] `React.memo()` on expensive components that re-render with same props
-- [ ] `useMemo()` / `useCallback()` only where profiling shows benefit
-- [ ] Long tasks (> 50ms) broken up to keep the main thread available — main lever for INP
-- [ ] `yieldToMain` pattern used inside long-running loops so input events can run between chunks
-- [ ] Modern scheduling APIs used where available: `scheduler.yield()` (preferred), `scheduler.postTask()` with priorities, `isInputPending()` to yield only when needed
-- [ ] `requestIdleCallback` for deferrable, non-urgent work (analytics flush, prefetch, warmup)
-- [ ] Non-critical work deferred out of event handlers (e.g. analytics, logging) so the response to the interaction is not delayed
-- [ ] Third-party scripts loaded with `async` / `defer`, audited for size, and fronted by a facade when heavy (chat widgets, embeds)
+### Frame Rendering (UI Thread)
+- [ ] Frames build within budget in profile mode on a mid-range device
+- [ ] `setState` scope is narrow; frequently changing state lives in small widgets
+- [ ] `BlocBuilder` / `BlocConsumer` are narrow; `buildWhen` or `BlocSelector` used for large states
+- [ ] States have value equality (freezed), so emitting an equal state doesn't rebuild
+- [ ] `const` constructors and instances wherever possible
+- [ ] No heavy work in `build()`, and no futures, controllers, or streams created in `build()`
+- [ ] `MediaQuery.sizeOf` / `viewInsetsOf` / `textScalerOf` instead of `MediaQuery.of`
+- [ ] No `IntrinsicHeight` / `IntrinsicWidth` inside lists or deep trees
+- [ ] `AnimatedBuilder` / `TweenAnimationBuilder` given a `child` for the static subtree
+- [ ] Subtrees extracted into widget classes (not `_buildX()` methods) to limit rebuild scope
 
-### CSS
-- [ ] Critical CSS inlined or preloaded
-- [ ] No render-blocking CSS for non-critical styles
-- [ ] No CSS-in-JS runtime cost in production (use extraction)
+### Lists and Scrolling
+- [ ] Long lists use lazy builders (`ListView.builder`, `SliverList.builder`, `GridView.builder`)
+- [ ] `itemExtent` or `prototypeItem` set for uniform lists
+- [ ] No `shrinkWrap: true` on large or nested scrollables; no `Column` of many children in a `SingleChildScrollView`
+- [ ] Items keyed (`ValueKey`) when they reorder or update
+- [ ] Data paginated, without rebuilding the whole list per page
+- [ ] Item builds are cheap: no oversize image decodes or heavy work per item
 
-### Fonts
-- [ ] Limited to 2–3 font families, 2–3 weights each (every additional weight is another request)
-- [ ] WOFF2 format only (smallest, universal support — skip WOFF/TTF/EOT)
-- [ ] Self-hosted when possible (third-party font CDNs add DNS + TCP + TLS round-trips)
-- [ ] LCP-critical fonts preloaded: `<link rel="preload" as="font" type="font/woff2" crossorigin>`
-- [ ] `font-display: swap` (or `optional` for non-critical) to avoid FOIT blocking render
-- [ ] Subsetted via `unicode-range` to ship only the glyphs each page needs
-- [ ] Variable fonts considered when multiple weights/styles are required (one file replaces many)
-- [ ] Fallback font metrics adjusted with `size-adjust`, `ascent-override`, `descent-override` to reduce CLS on font swap
-- [ ] System font stack considered before any custom font
+### Raster Thread and Shaders
+- [ ] No `Opacity`, `ClipRRect`, `ClipPath`, `ShaderMask`, `BackdropFilter`, or `saveLayer` triggers in scrolling or animated content without need; `FadeTransition` / `AnimatedOpacity` used instead of `Opacity`
+- [ ] `RepaintBoundary` placed deliberately around genuinely expensive, independently repainting subtrees
+- [ ] The renderer (Impeller vs Skia) is confirmed per target platform before doing shader-warmup work
+- [ ] Custom painters repaint only when needed (`shouldRepaint`)
+- [ ] Off-screen animations paused (`TickerMode`); large animations (Lottie, Rive, GIF) sized appropriately
 
-### Network
-- [ ] Static assets cached with long `max-age` + content hashing
-- [ ] API responses cached where appropriate (`Cache-Control`)
-- [ ] HTTP/2 or HTTP/3 enabled
-- [ ] Resources preconnected (`<link rel="preconnect">`) for known origins
-- [ ] `fetchpriority` used on critical non-image resources (e.g., key `<link rel="preload">`, above-the-fold `<script>`) — not only on `<img>`
-- [ ] No unnecessary redirects
+### Images and Assets
+- [ ] Images decoded near display size (`cacheWidth` / `cacheHeight`, in physical pixels), not at full resolution
+- [ ] Remote images cached (for example `cached_network_image`)
+- [ ] Assets in efficient formats (WebP/AVIF where supported) and sensible dimensions, with resolution-aware variants
+- [ ] `precacheImage` used only for what the first frame needs
+- [ ] SVGs limited in count and complexity
+- [ ] Fonts limited to 2–3 families and few weights; fonts fetched at runtime (`google_fonts`) are bundled instead when startup matters
+- [ ] Icon fonts tree-shaken (the release default); no unused icon sets or fonts bundled
 
-### Rendering
-- [ ] No layout thrashing (forced synchronous layouts)
-- [ ] Animations use `transform` and `opacity` (GPU-accelerated)
-- [ ] Long lists use virtualization (e.g., `react-window`)
-- [ ] No unnecessary full-page re-renders
-- [ ] Off-screen sections use `content-visibility: auto` with `contain-intrinsic-size` to skip layout/paint of non-visible areas
-- [ ] No `unload` event handlers and no `Cache-Control: no-store` on HTML responses — preserves back/forward cache (bfcache) eligibility
+### Isolates and UI-Isolate Work
+- [ ] Large JSON parsing, encryption, compression, image processing, and big sorts run off the UI isolate (`Isolate.run`), *after* measuring
+- [ ] No synchronous file or database I/O on the UI isolate (`readAsStringSync` and similar)
+- [ ] Isolates not used for trivial work (message-passing cost outweighs the gain)
+- [ ] Platform channel calls are batched, and large payloads across channels avoided (copy cost)
+
+### Startup
+- [ ] Minimal work before `runApp`; independent initialization runs in parallel (`Future.wait`)
+- [ ] Non-critical initialization (remote config, analytics warm-up) deferred until after the first frame
+- [ ] First screen renders without waiting on the network
+- [ ] `BlocProvider` creation lazy for features not needed at launch
+- [ ] Rarely used features candidates for deferred loading (`deferred as`, deferred components on Android)
+- [ ] Native splash hands off cleanly, with no blank frame or long white screen
+- [ ] Startup measured with `--trace-startup`, and tracked per release
+
+### Memory and Lifecycle
+- [ ] `AnimationController`, `TextEditingController`, `ScrollController`, `FocusNode`, and subscriptions disposed or cancelled
+- [ ] Cubits/Blocs cancel subscriptions and timers in `close()`
+- [ ] Listeners added in `initState` removed in `dispose`
+- [ ] No `BuildContext`, large objects, or images held in singletons, statics, or long-lived streams
+- [ ] Image cache size appropriate for the app's memory profile
+- [ ] Memory snapshots before and after repeated navigation show no sustained growth
+- [ ] No `setState` or `emit` after `dispose` / `close` (mounted / `isClosed` checks across async gaps)
+
+### Network (Client)
+- [ ] API responses paginated, and payloads no larger than the screen needs
+- [ ] Independent requests run in parallel (`Future.wait`); duplicate in-flight requests deduplicated
+- [ ] Responses cached with sensible invalidation (`ETag` / conditional requests, HTTP cache, local database)
+- [ ] One HTTP client instance reused (connection reuse), with timeouts set
+- [ ] Retries bounded with exponential backoff; graceful offline and flaky-network behavior
+- [ ] No requests issued from `build()` or widgets that rebuild often
+- [ ] Response compression enabled; chatty endpoints replaced by batch or aggregate endpoints
+- [ ] Polling replaced by push or streaming where possible
+
+### App Size
+- [ ] `--analyze-size` run on a release build, largest packages and assets reviewed
+- [ ] Unused packages, assets, fonts, and icon sets removed
+- [ ] App bundles (Android) or split-per-ABI used; debug symbols split out (`--split-debug-info`, paired with `--obfuscate`)
+- [ ] Images compressed; large assets downloaded on demand instead of bundled
+- [ ] Deferred components considered for rarely used features on Android
+- [ ] Size tracked per release with a budget
+
+### Battery and Background
+- [ ] Timers, polling, and animations stop when the screen is off-screen or the app is backgrounded (`TickerMode`, lifecycle callbacks)
+- [ ] Location requested at the lowest accuracy and frequency the feature needs, and stopped when not needed
+- [ ] Wakelocks, background fetch, and long-running background tasks held no longer than necessary
+- [ ] Sensors, camera, and streams released when leaving their screens
+- [ ] Network work batched to avoid waking the radio repeatedly
 
 ## Backend Checklist
 
@@ -184,37 +226,46 @@ For a shared cache, the same idea needs a distributed lock, or `stale-while-reva
 
 ## Measurement Commands
 
-### INP field data and DevTools workflow
+### Workflow
 
-1. **Field data first** — check [CrUX Vis](https://developer.chrome.com/docs/crux/vis) or your RUM tool for real-user INP before optimising
-2. **Identify slow interactions** — open DevTools → Performance panel → record while interacting; look for long tasks triggered by clicks/keystrokes
-3. **Test on mid-range Android** — INP issues often only surface on slower hardware; use a real device or DevTools CPU throttling (4×–6× slowdown)
+1. **Field data first.** Check Play Console vitals, Xcode Organizer, Firebase Performance, or Crashlytics for real-user startup, jank, ANR, and crash data by app version and device before optimizing.
+2. **Reproduce in profile mode on a real device.** Debug mode and emulators are not representative. Record a DevTools Performance capture while doing the slow interaction; check the UI vs raster thread, jank frames, and rebuild counts.
+3. **Test on a mid-range or low-end Android device.** Many issues only show on slower hardware; a flagship phone hides them.
 
 ```bash
-# Lighthouse CLI
-npx lighthouse https://localhost:3000 --output json --output-path ./report.json
+# Profile mode on a connected device
+flutter run --profile
 
-# Bundle analysis
-npx webpack-bundle-analyzer stats.json
-# or for Vite:
-npx vite-bundle-visualizer
+# Startup: writes build/start_up_info.json (time to first frame, framework init)
+flutter run --profile --trace-startup
 
-# Check bundle size
-npx bundlesize
+# App size: writes a code-size-analysis JSON; open it in DevTools' app size tool
+flutter build apk --analyze-size        # also: appbundle, ios
 
-# Web Vitals in code
-import { onLCP, onINP, onCLS } from 'web-vitals';
-onLCP(console.log);
-onINP(console.log);
-onCLS(console.log);
+# Repeatable frame timing in a test (integration_test + traceAction / TimelineSummary)
+flutter drive --profile --driver=test_driver/perf_driver.dart --target=integration_test/scroll_perf_test.dart
 
-# INP with interaction-level detail (attribution build)
-import { onINP } from 'web-vitals/attribution';
-onINP(({ value, attribution }) => {
-  const { interactionTarget, inputDelay, processingDuration, presentationDelay } = attribution;
-  console.log({ value, interactionTarget, inputDelay, processingDuration, presentationDelay });
-});
+# DevTools: Performance, CPU Profiler, Memory, Network, Inspector (widget rebuild counts)
+dart devtools
+
+# Android native stats
+adb shell dumpsys gfxinfo <package> framestats     # frame timing
+adb shell dumpsys meminfo <package>                # memory
+adb shell am start -W -n <package>/<activity>      # cold start timing (TotalTime)
+
+# iOS: Xcode Instruments (Time Profiler, Allocations, Animation Hitches, Energy) and Organizer
 ```
+
+```dart
+// Custom spans appear in the DevTools timeline
+import 'dart:developer';
+final tasks = Timeline.timeSync('parse-tasks', () => parseTasks(body));
+
+// Overlay frame timings while running in profile mode
+MaterialApp(showPerformanceOverlay: true, /* ... */)
+```
+
+Neither mobile-mcp nor the Dart MCP server produces a frame timeline or memory profile. Get those from DevTools, and see `flutter-devtools-and-device-testing` for what the agent tools can do (repeatable cold starts, screen recording, crash lists).
 
 ## Common Anti-Patterns
 
@@ -229,8 +280,14 @@ onINP(({ value, attribution }) => {
 | Cache key missing the viewer | One user's data served to another | Key on tenant, viewer, locale, permissions |
 | Unbounded cache | Memory leak wearing an optimization's clothing | Set eviction policy and a memory ceiling |
 | Cache stampede on a hot key | Origin takes full concurrent load at expiry | Coalesce misses, or `stale-while-revalidate` |
-| Layout thrashing | Jank, dropped frames | Batch DOM reads, then batch writes |
-| Unoptimized images | Slow LCP, wasted bandwidth | Use WebP, responsive sizes, lazy load |
-| Large bundles | Slow Time to Interactive | Code split, tree shake, audit deps |
-| Blocking main thread | Poor INP, unresponsive UI | Chunk long tasks with `scheduler.yield()` / `yieldToMain`, offload to Web Workers |
-| Memory leaks | Growing memory, eventual crash | Clean up listeners, intervals, refs |
+| Measuring in debug mode or on an emulator | Numbers off by an order of magnitude | Profile mode on a real, mid-range device |
+| Whole-screen `BlocBuilder` / root `setState` | Large subtrees rebuild for a small change | `BlocSelector`, `buildWhen`, smaller widgets, `const` |
+| `ListView(children: [...])` for long lists | Builds every item up front | `ListView.builder` with `itemExtent` |
+| Full-resolution image for a small view | Memory and decode cost, raster jank | `cacheWidth` / `cacheHeight`, cached network images |
+| Heavy parsing or sync I/O on the UI isolate | Dropped frames, frozen taps | `Isolate.run`, async I/O |
+| Serial SDK init before `runApp` | Slow cold start | `Future.wait`, defer non-critical work |
+| `Opacity` / clips / blurs in scrolling content | Raster-thread jank | `FadeTransition`, cheaper clipping, pre-rendered assets |
+| Futures or controllers created in `build()` | Refetch and leaks on every rebuild | Create in `initState` or a Cubit; dispose |
+| Undisposed controllers and subscriptions | Growing memory, eventual OOM kill | `dispose()` / `close()` everything you own |
+| Polling and timers running in the background | Battery drain | Stop on pause; use push |
+| Unreviewed packages and assets | Growing app size | `--analyze-size` per release, remove unused |
