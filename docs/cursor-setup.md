@@ -155,7 +155,7 @@ Explicit user phrases (“follow TDD”, “use code-review-and-quality”) stil
 | Clarifying requirements | `interview-me`, `idea-refine`, `spec-driven-development` |
 | Planning tasks | `planning-and-task-breakdown` |
 | Implementing | `incremental-implementation`, `frontend-ui-engineering`, `api-and-interface-design` |
-| Testing | `test-driven-development`, `browser-testing-with-devtools` |
+| Testing | `test-driven-development`, `flutter-devtools-and-device-testing` |
 | Debugging | `debugging-and-error-recovery` |
 | Reviewing | `code-review-and-quality`, `code-simplification` |
 | Security / performance | `security-and-hardening`, `performance-optimization` |

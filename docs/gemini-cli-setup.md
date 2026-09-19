@@ -84,7 +84,7 @@ Install these as skills so they activate only when relevant:
 
 Many skills in this pack leverage [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) tools to interact with the environment. For example:
 
-- `browser-testing-with-devtools` uses the `chrome-devtools` MCP extension.
+- `flutter-devtools-and-device-testing` uses the Dart and Flutter MCP server (`dart mcp-server`) and mobile-mcp (`@mobilenext/mobile-mcp`).
 - `performance-optimization` can benefit from performance-related MCP tools.
 
 To enable these, ensure you have the relevant MCP extensions installed in your Gemini CLI configuration (`~/.gemini/config.json`).

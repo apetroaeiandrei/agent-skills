@@ -260,7 +260,7 @@ The commands above are entry points. The pack includes 25 skills total — 24 li
 
 | Skill | What It Does | Use When |
 |-------|-------------|----------|
-| [browser-testing-with-devtools](skills/browser-testing-with-devtools/SKILL.md) | Chrome DevTools MCP for live runtime data - DOM inspection, console logs, network traces, performance profiling | Building or debugging anything that runs in a browser |
+| [flutter-devtools-and-device-testing](skills/flutter-devtools-and-device-testing/SKILL.md) | Flutter DevTools, the Dart MCP server, and mobile-mcp for live runtime data and device control - widget inspection, UI driving, screenshots, runtime errors and device logs, network traces, frame profiling | Building or debugging anything that runs in a Flutter app |
 | [debugging-and-error-recovery](skills/debugging-and-error-recovery/SKILL.md) | Five-step triage: reproduce, localize, reduce, fix, guard. Stop-the-line rule, safe fallbacks | Tests fail, builds break, or behavior is unexpected |
 
 ### Review - Quality gates before merge

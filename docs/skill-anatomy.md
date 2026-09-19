@@ -34,9 +34,8 @@ description: Guides agents through [task/workflow]. Use when [specific trigger c
 
 Published names are compatibility identifiers. In particular,
 `browser-testing-with-devtools` is the stable upstream name because other
-skills refer to it directly. A downstream catalog may rename it, but that
-catalog owns the alias or migration mapping; downstream-only aliases are not
-maintained in this repository.
+skills refer to it directly. This mobile fork renamed it to
+`flutter-devtools-and-device-testing`; the fork owns that mapping, and no alias is kept.
 
 **Why this matters:** Agents discover skills by reading descriptions. The description is injected into the system prompt, so it must tell the agent both what the skill provides and when to activate it. Do not summarize the workflow — if the description contains process steps, the agent may follow the summary instead of reading the full skill.
 
