@@ -3,7 +3,7 @@
   "trigger": {
     "positive": [
       {
-        "prompt": "The app crashes with a TypeError when I click save, help me find the root cause",
+        "prompt": "The app crashes with a null check error when I tap save, help me find the root cause",
         "top_k": 3
       },
       {
@@ -12,6 +12,10 @@
       },
       {
         "prompt": "This test passed yesterday and fails today, figure out what broke",
+        "top_k": 3
+      },
+      {
+        "prompt": "This bug only happens in the release build on one Android device, figure out why",
         "top_k": 3
       }
     ],

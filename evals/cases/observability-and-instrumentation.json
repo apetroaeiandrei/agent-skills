@@ -11,7 +11,7 @@
         "top_k": 3
       },
       {
-        "prompt": "What alerts should we page on for crashes and errors in this new feature?",
+        "prompt": "What symptom-based alerts and runbooks should we page on for this new feature?",
         "top_k": 3
       }
     ],
