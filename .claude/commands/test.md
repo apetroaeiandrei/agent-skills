@@ -16,4 +16,6 @@ For bug fixes (Prove-It pattern):
 4. Confirm the test passes
 5. Run the full test suite for regressions
 
+If freezed or other generated code changed, run `dart run build_runner build -d` before running tests. Use the project's own test commands (`flutter test`, or `dart test` for pure Dart packages).
+
 For UI or runtime issues in a Flutter app, also invoke agent-skills:flutter-devtools-and-device-testing to verify on a device with Flutter DevTools, the Dart MCP server, and mobile-mcp.
