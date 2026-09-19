@@ -66,7 +66,7 @@ The frame budget is 16.6ms at 60Hz and 8.3ms at 120Hz. Build plus layout must fi
 
 - Are rebuilds scoped tightly? Is `setState` called high in the tree, rebuilding large subtrees?
 - Do `BlocBuilder` / `BlocConsumer` widgets rebuild more than they need to? Look for missing `buildWhen`, a `BlocBuilder` wrapping a whole screen, or `BlocSelector` opportunities for fine-grained state.
-- Do Cubit states implement value equality (`Equatable` or equivalent)? Without it, every `emit` of an equal state still rebuilds listeners.
+- Do Cubit states get value equality (freezed, or an equivalent)? Without it, every `emit` of an equal state still rebuilds listeners.
 - Are widgets `const` wherever possible (constructors and instances)?
 - Is heavy work done inside `build()` (sorting, filtering, parsing, creating controllers or futures)?
 - Is a `Future` created inside `build()` and handed to `FutureBuilder`, refetching on every rebuild?

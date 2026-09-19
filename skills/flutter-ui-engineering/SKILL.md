@@ -1,6 +1,6 @@
 ---
 name: flutter-ui-engineering
-description: Builds production-quality, accessible, adaptive Flutter UIs. Use when building or modifying screens, creating widgets, implementing layouts, theming, navigation, managing state with Bloc/Cubit, meeting accessibility requirements (Semantics, TalkBack, VoiceOver, text scaling), or when the output needs to look and feel production-quality rather than AI-generated.
+description: Builds production-quality, accessible, adaptive Flutter UIs. Use when building or modifying screens, creating widgets, implementing layouts, theming, navigation, managing state with Bloc/Cubit and freezed, meeting accessibility requirements (Semantics, TalkBack, VoiceOver, text scaling), or when the output needs to look and feel production-quality rather than AI-generated.
 ---
 
 # Flutter UI Engineering
@@ -27,13 +27,13 @@ Organize by feature, and colocate everything related to it:
 lib/features/tasks/
   cubit/
     tasks_cubit.dart        # Cubit
-    tasks_state.dart        # State (part of tasks_cubit.dart)
+    tasks_state.dart        # Freezed union state (+ generated tasks_state.freezed.dart)
   view/
     tasks_page.dart         # Page: provides the Cubit (BlocProvider)
     tasks_view.dart         # View: consumes the Cubit (BlocBuilder)
   widgets/
     task_item.dart          # Widgets private to this feature
-  data/                     # Models, repository interface (if not shared)
+  data/                     # Freezed models (+ generated .freezed.dart / .g.dart), repository interface
 test/features/tasks/
   cubit/tasks_cubit_test.dart
   view/tasks_view_test.dart
@@ -178,14 +178,77 @@ HydratedBloc / persistent storage  → State that must survive app restarts
 **Cubit by default, Bloc when events earn their keep.** Cubits are less ceremony: methods that `emit` states. Move to Bloc when you need event transformers (search-as-you-type debounce, ignoring duplicate submits) or when tracing "what happened" matters.
 
 **Rules for Cubit/Bloc state:**
-- States are **immutable** and implement value equality (`Equatable` or equivalent). Without it, every `emit` looks like a change and rebuilds listeners.
-- Model states as a `sealed` class hierarchy (or one class with a status enum) so the UI must handle loading, failure, empty, and loaded exhaustively.
+- States are **immutable** and get value equality from **freezed** (see States and Models with Freezed below). Without value equality, every `emit` looks like a change and rebuilds listeners.
+- Model states as a freezed union (a `sealed` class with one constructor per state) so the UI must handle loading, failure, empty, and loaded exhaustively.
 - Never hold a `BuildContext` in a Cubit, and never call one Cubit from another. Coordinate through the presentation layer (`BlocListener`) or a shared repository stream.
 - Use `context.read` in callbacks and `BlocBuilder` / `BlocSelector` / `context.watch` in `build`. Never `watch` inside callbacks.
 - Use `BlocListener` (not `BlocBuilder`) for side effects: navigation, snackbars, dialogs.
 - Narrow rebuilds with `buildWhen` or `BlocSelector` when the state is large.
 - Provide a Cubit as low in the tree as the widgets that need it. App-wide only for genuinely app-wide state (auth, theme, locale).
 - Close what you own: cancel stream subscriptions and timers in the Cubit's `close()`.
+
+### States and Models with Freezed
+
+**Always use [freezed](https://pub.dev/packages/freezed) for Cubit/Bloc states and data models. Never `Equatable`, and never hand-written `==`, `hashCode`, `copyWith`, or `toString`.** Freezed generates all of them, keeps objects immutable (collections included, by default), and gives union types exhaustive pattern matching.
+
+Setup:
+
+```bash
+flutter pub add freezed_annotation dev:build_runner dev:freezed
+flutter pub add json_annotation dev:json_serializable   # only if models use fromJson/toJson
+```
+
+**Declaration rules (freezed 3+ syntax):**
+- Import `freezed_annotation` and add `part 'file_name.freezed.dart';`, plus `part 'file_name.g.dart';` when using JSON serialization. A missing `part` breaks generation.
+- Annotate with `@freezed`, apply the mixin `with _$ClassName`, and declare fields through a `const factory` constructor (not a plain constructor).
+- **Union types (multiple constructors, e.g. states) are `sealed class`.** Each constructor redirects to a public class that the View switches on.
+- **Single-constructor classes (models) are `abstract class`**, as the freezed docs show.
+- Custom getters or methods need a private empty constructor: `const ClassName._();`.
+- Use `@Default(...)` for default values. Avoid `@unfreezed` (mutable) for states and models.
+- Match with Dart 3 `switch` patterns (`TasksLoaded(:final tasks)`), not the legacy `when` / `map`.
+- Update nested immutable data with `copyWith`, including deep copy: `company.copyWith.director.assistant(name: 'John')`.
+
+```dart
+// lib/features/tasks/data/task.dart: model (single constructor → abstract)
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'task.freezed.dart';
+part 'task.g.dart';
+
+@freezed
+abstract class Task with _$Task {
+  const factory Task({
+    required String id,
+    required String title,
+    @Default(false) bool done,
+  }) = _Task;
+
+  factory Task.fromJson(Map<String, Object?> json) => _$TaskFromJson(json);
+}
+
+// lib/features/tasks/cubit/tasks_state.dart: state (union → sealed)
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'tasks_state.freezed.dart';
+
+@freezed
+sealed class TasksState with _$TasksState {
+  const factory TasksState.loading() = TasksLoading;
+  const factory TasksState.failure(String message) = TasksFailure;
+  const factory TasksState.loaded({required List<Task> tasks}) = TasksLoaded;
+}
+```
+
+**Run the code generator after every change to a freezed class.** Adding, removing, or renaming a field, constructor, annotation, or `part` directive leaves the generated `*.freezed.dart` / `*.g.dart` files stale until you regenerate:
+
+```bash
+dart run build_runner build -d     # one-off (-d deletes conflicting outputs)
+dart run build_runner watch -d     # keep running while iterating
+```
+
+- Run it **before** `flutter analyze`, `flutter test`, or launching the app. Symptoms of stale output: `_$Task` isn't defined, missing `copyWith`, "missing concrete implementation of ...", or a `switch` that does not see a new state.
+- Run it yourself. Do not ask the user to, and never hand-edit generated files.
+- Follow the project's convention for generated files: check `.gitignore`. If they are committed, commit the regenerated files with the change; if not, make sure CI runs `build_runner` before analysis and tests.
 
 **Avoid prop drilling deeper than 3 levels.** If you're passing parameters through widgets that don't use them, provide the value with `BlocProvider` / `RepositoryProvider` or restructure the tree.
 
@@ -453,7 +516,7 @@ Future<void> toggle(String id) async {
   final current = state;
   if (current is! TasksLoaded) return;
 
-  emit(TasksLoaded([
+  emit(TasksState.loaded(tasks: [
     for (final t in current.tasks) t.id == id ? t.copyWith(done: !t.done) : t,
   ]));
 
@@ -488,6 +551,8 @@ To lock in the result with widget and golden tests, see `test-driven-development
 | "The design isn't final, so I'll skip theming" | Use the design system defaults. Hard-coded colors and sizes become permanent. |
 | "This is just a prototype" | Prototypes become production code. Build the foundation right. |
 | "The AI aesthetic is fine for now" | It signals low quality. Use the project's actual design system from the start. |
+| "`Equatable` is lighter than freezed" | Freezed gives equality, `copyWith`, immutability, and exhaustive unions in one place, with no hand-maintained `props` list to forget a field in. Use it for every state and model. |
+| "I'll skip `build_runner`, the analyzer errors are just noise" | They mean the generated code is stale. Regenerate before analyzing, testing, or running. |
 | "`setState` is simpler than a Cubit" | For ephemeral UI state, yes. For anything with async work or logic shared across widgets, the Cubit is easier to test and keeps `build()` clean. |
 | "A `_buildFoo()` method is easier than a new class" | It can't be `const`, rebuilds with its parent, and can't be tested alone. Extract a widget. |
 | "Screen readers will figure out my custom widget" | They only see what `Semantics` exposes. A bare `GestureDetector` is invisible. |
@@ -500,7 +565,9 @@ To lock in the result with widget and golden tests, see `test-driven-development
 - `Colors.deepPurple` and other `flutter create` template defaults left in
 - Business logic, API calls, or `Future`s created inside `build()` or directly in widgets
 - `setState` at the root of a screen for feature data
-- States without value equality, or Cubits that hold `BuildContext` or call other Cubits
+- `Equatable`, hand-written `copyWith` / `==`, or mutable classes used for states and models instead of freezed
+- Freezed classes edited without re-running `build_runner`, or generated files edited by hand
+- Cubits that hold `BuildContext` or call other Cubits
 - Missing error, loading, or empty states
 - `BuildContext` used after an `await` without a `mounted` check
 - `GestureDetector` on tappable elements with no `Semantics`, icon-only buttons with no label or tooltip
@@ -521,5 +588,6 @@ After building UI:
 - [ ] Layout holds at 360 dp width, tablet width, landscape, and 200% text scale, in light and dark themes
 - [ ] Loading, error, and empty states all handled
 - [ ] Follows the project's design system (theme tokens, spacing scale, typography roles)
-- [ ] State lives in Cubits/Blocs with immutable, equatable states; `build()` has no side effects
+- [ ] State lives in Cubits/Blocs with freezed states and models (no `Equatable`); `build()` has no side effects
+- [ ] `dart run build_runner build -d` was run after the last change to any freezed class, and `flutter analyze` is clean afterwards
 - [ ] Widget tests cover the states, and accessibility guidelines are asserted where it matters (`meetsGuideline(androidTapTargetGuideline)`, `labeledTapTargetGuideline`, `textContrastGuideline`)
