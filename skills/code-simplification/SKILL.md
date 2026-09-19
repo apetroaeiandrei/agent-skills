@@ -41,6 +41,14 @@ ASK BEFORE EVERY CHANGE:
 → Do all existing tests still pass without modification?
 ```
 
+In a Flutter app, "behavior" includes more than inputs and outputs. A simplification must also preserve:
+
+- **Rebuild behavior and state preservation:** removing a `Key`, changing a widget's position in the tree, or dropping `const` can change what rebuilds and whether state survives
+- **Accessibility:** removing a `Semantics`, `MergeSemantics`, or `tooltip` changes what screen readers announce
+- **Lifecycle:** `dispose`, `mounted` checks, and subscription cancellation are behavior, not clutter
+- **Platform behavior:** branches on `Platform.isIOS` or `kIsWeb`, and adaptive widgets, exist for a reason
+- **Visual output:** a golden test that changes means you changed the UI
+
 ### 2. Follow Project Conventions
 
 Simplification means making code more consistent with the codebase, not imposing external preferences. Before simplifying:
@@ -54,6 +62,8 @@ Simplification means making code more consistent with the codebase, not imposing
    - Naming conventions
    - Error handling patterns
    - Type annotation depth
+   - Flutter idioms: state management (Cubit), freezed models, widget classes, theme tokens
+   - The lints in analysis_options.yaml
 ```
 
 Simplification that breaks project consistency is not simplification — it's churn.
@@ -62,12 +72,12 @@ Simplification that breaks project consistency is not simplification — it's ch
 
 Explicit code is better than compact code when the compact version requires a mental pause to parse.
 
-```typescript
+```dart
 // UNCLEAR: Dense ternary chain
-const label = isNew ? 'New' : isUpdated ? 'Updated' : isArchived ? 'Archived' : 'Active';
+final label = isNew ? 'New' : isUpdated ? 'Updated' : isArchived ? 'Archived' : 'Active';
 
 // CLEAR: Readable mapping
-function getStatusLabel(item: Item): string {
+String statusLabel(Item item) {
   if (item.isNew) return 'New';
   if (item.isUpdated) return 'Updated';
   if (item.isArchived) return 'Archived';
@@ -75,17 +85,17 @@ function getStatusLabel(item: Item): string {
 }
 ```
 
-```typescript
-// UNCLEAR: Chained reduces with inline logic
-const result = items.reduce((acc, item) => ({
-  ...acc,
-  [item.id]: { ...acc[item.id], count: (acc[item.id]?.count ?? 0) + 1 }
-}), {});
+```dart
+// UNCLEAR: Chained folds with inline logic
+final countById = items.fold<Map<String, int>>(
+  {},
+  (acc, item) => {...acc, item.id: (acc[item.id] ?? 0) + 1},
+);
 
 // CLEAR: Named intermediate step
-const countById = new Map<string, number>();
-for (const item of items) {
-  countById.set(item.id, (countById.get(item.id) ?? 0) + 1);
+final countById = <String, int>{};
+for (final item in items) {
+  countById[item.id] = (countById[item.id] ?? 0) + 1;
 }
 ```
 
@@ -115,6 +125,7 @@ BEFORE SIMPLIFYING, ANSWER:
 - What are the edge cases and error paths?
 - Are there tests that define the expected behavior?
 - Why might it have been written this way? (Performance? Platform constraint? Historical reason?)
+- If it's Flutter code: is it a lifecycle guard (`mounted`, `dispose`), a `Key`, a `RepaintBoundary`, a platform branch, or a workaround for an SDK or plugin bug? These look redundant and often aren't
 - Check git blame: what was the original context for this code?
 ```
 
@@ -156,7 +167,7 @@ Scan for these patterns — each one is a concrete signal, not a vague smell:
 
 ### Step 3: Apply Changes Incrementally
 
-Make one simplification at a time. Run tests after each change. **Submit refactoring changes separately from feature or bug fix changes.** A PR that refactors and adds a feature is two PRs — split them.
+Make one simplification at a time. Run tests after each change (`flutter test`), and let `dart fix --apply` and the analyzer handle purely mechanical, lint-driven cleanups (`prefer_const_constructors`, `unnecessary_this`, `prefer_final_locals`) in their own commit. **Submit refactoring changes separately from feature or bug fix changes.** A PR that refactors and adds a feature is two PRs — split them.
 
 ```
 FOR EACH SIMPLIFICATION:
@@ -184,9 +195,81 @@ COMPARE BEFORE AND AFTER:
 
 If the "simplified" version is harder to understand or review, revert. Not every simplification attempt succeeds.
 
+Never simplify generated files (`*.freezed.dart`, `*.g.dart`). Simplify the source classes and regenerate.
+
 ## Language-Specific Guidance
 
-### TypeScript / JavaScript
+### Dart
+
+```dart
+// SIMPLIFY: Redundant async wrapper
+// Before
+Future<User> getUser(String id) async {
+  return await userService.findById(id);
+}
+// After (only outside a try/catch: inside one, `return await` changes which errors you catch)
+Future<User> getUser(String id) => userService.findById(id);
+
+// SIMPLIFY: Verbose null fallback
+// Before
+String displayName;
+if (user.nickname != null) {
+  displayName = user.nickname!;
+} else {
+  displayName = user.fullName;
+}
+// After (note: `??` falls back only on null, so an empty-string nickname still wins,
+// exactly as in the original. Don't "simplify" to a check that treats '' as missing.)
+final displayName = user.nickname ?? user.fullName;
+
+// SIMPLIFY: Manual list building
+// Before
+final activeUsers = <User>[];
+for (final user in users) {
+  if (user.isActive) {
+    activeUsers.add(user);
+  }
+}
+// After
+final activeUsers = users.where((user) => user.isActive).toList();
+
+// SIMPLIFY: Conditional list building (collection if / spread)
+// Before
+final children = <Widget>[header];
+if (showBanner) {
+  children.add(banner);
+}
+children.addAll(items);
+// After
+final children = [header, if (showBanner) banner, ...items];
+
+// SIMPLIFY: If/else chain over a sealed type or enum (Dart 3 switch expression)
+// Before
+String label(TaskStatus status) {
+  if (status is TaskPending) return 'Pending';
+  if (status is TaskCompleted) return 'Done';
+  return 'Cancelled';
+}
+// After (also gives you exhaustiveness checking)
+String label(TaskStatus status) => switch (status) {
+      TaskPending() => 'Pending',
+      TaskCompleted() => 'Done',
+      TaskCancelled() => 'Cancelled',
+    };
+
+// SIMPLIFY: Redundant boolean return
+// Before
+bool isValid(String input) {
+  if (input.isNotEmpty && input.length < 100) {
+    return true;
+  }
+  return false;
+}
+// After
+bool isValid(String input) => input.isNotEmpty && input.length < 100;
+```
+
+### TypeScript / JavaScript (backend)
 
 ```typescript
 // SIMPLIFY: Unnecessary async wrapper
@@ -270,29 +353,51 @@ def process(data):
     return do_work(data)
 ```
 
-### React / JSX
+### Flutter Widgets
 
-```tsx
+```dart
+// SIMPLIFY: Container used only for padding or size
+// Before
+Container(padding: const EdgeInsets.all(16), child: child)
+Container(width: 8, height: 8)
+// After
+Padding(padding: const EdgeInsets.all(16), child: child)
+const SizedBox(width: 8, height: 8)
+
+// SIMPLIFY: _buildX() helper methods → widget classes
+// Before
+Widget _buildHeader() => Padding(padding: const EdgeInsets.all(16), child: Text(title));
+// After (can be const, rebuilds independently, is testable on its own)
+class _Header extends StatelessWidget {
+  const _Header({required this.title});
+  final String title;
+
+  @override
+  Widget build(BuildContext context) =>
+      Padding(padding: const EdgeInsets.all(16), child: Text(title));
+}
+
 // SIMPLIFY: Verbose conditional rendering
 // Before
-function UserBadge({ user }: Props) {
+Widget build(BuildContext context) {
   if (user.isAdmin) {
-    return <Badge variant="admin">Admin</Badge>;
+    return const Badge(label: Text('Admin'), color: Colors.red);
   } else {
-    return <Badge variant="default">User</Badge>;
+    return const Badge(label: Text('User'), color: Colors.grey);
   }
 }
 // After
-function UserBadge({ user }: Props) {
-  const variant = user.isAdmin ? 'admin' : 'default';
-  const label = user.isAdmin ? 'Admin' : 'User';
-  return <Badge variant={variant}>{label}</Badge>;
-}
-
-// SIMPLIFY: Prop drilling through intermediate components
-// Before — consider whether context or composition solves this better.
-// This is a judgment call — flag it, don't auto-refactor.
+Widget build(BuildContext context) => Badge(
+      label: Text(user.isAdmin ? 'Admin' : 'User'),
+      color: user.isAdmin ? Colors.red : Colors.grey,
+    );
 ```
+
+**Judgment calls: flag them, don't auto-refactor.** Each of these changes structure, not just expression:
+
+- **Prop drilling through intermediate widgets:** consider whether a `BlocProvider`, an inherited widget, or composition solves it better.
+- **`StatefulWidget` + `setState` doing feature logic:** moving it into a Cubit is a redesign, not a simplification.
+- **Removing a `Key`, `Semantics`, `RepaintBoundary`, or `const`:** it may look redundant and change behavior. Verify with tests and a device before removing.
 
 ## Common Rationalizations
 
@@ -304,6 +409,7 @@ function UserBadge({ user }: Props) {
 | "The types make it self-documenting" | Types document structure, not intent. A well-named function explains *why* better than a type signature explains *what*. |
 | "This abstraction might be useful later" | Don't preserve speculative abstractions. If it's not used now, it's complexity without value. Remove it and re-add when needed. |
 | "The original author must have had a reason" | Maybe. Check git blame — apply Chesterton's Fence. But accumulated complexity often has no reason; it's just the residue of iteration under pressure. |
+| "Removing that `mounted` check / `Key` / `Semantics` makes it cleaner" | Those are behavior: lifecycle safety, state preservation, accessibility. Confirm what they guard (Chesterton's Fence) before removing them. |
 | "I'll refactor while adding this feature" | Separate refactoring from feature work. Mixed changes are harder to review, revert, and understand in history. |
 
 ## Red Flags
@@ -315,12 +421,17 @@ function UserBadge({ user }: Props) {
 - Simplifying code you don't fully understand
 - Batching many simplifications into one large, hard-to-review commit
 - Refactoring code outside the scope of the current task without being asked
+- Removing `mounted` checks, `dispose` calls, `Key`s, `Semantics`, or platform branches because they "look unnecessary"
+- Hand-editing generated files (`*.freezed.dart`, `*.g.dart`) instead of the source classes
+- Treating a state-management redesign as a "simplification"
+- A golden test diff that was updated to make a "simplification" pass
 
 ## Verification
 
 After completing a simplification pass:
 
-- [ ] All existing tests pass without modification
+- [ ] All existing tests pass without modification, and goldens are unchanged
+- [ ] `flutter analyze` and `dart format` are clean
 - [ ] Build succeeds with no new warnings
 - [ ] Linter/formatter passes (no style regressions)
 - [ ] Each simplification is a reviewable, incremental change
