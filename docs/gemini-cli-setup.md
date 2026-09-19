@@ -74,7 +74,7 @@ Install these as skills so they activate only when relevant:
 
 - `test-driven-development` — Activates when implementing logic or fixing bugs
 - `spec-driven-development` — Activates when starting a new project or feature
-- `frontend-ui-engineering` — Activates when building UI
+- `flutter-ui-engineering` — Activates when building UI
 - `security-and-hardening` — Activates during security reviews
 - `performance-optimization` — Activates during performance work
 

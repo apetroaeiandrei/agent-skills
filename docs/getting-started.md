@@ -87,7 +87,7 @@ Before deploy:       shipping-and-launch
 
 Don't load all skills at once — it wastes context. Load skills relevant to the current task:
 
-- Working on UI? Load `frontend-ui-engineering`
+- Working on UI? Load `flutter-ui-engineering`
 - Debugging? Load `debugging-and-error-recovery`
 - Setting up CI? Load `ci-cd-and-automation`
 
@@ -153,7 +153,7 @@ The `references/` directory contains supplementary checklists:
 | `testing-patterns.md` | test-driven-development |
 | `performance-checklist.md` | performance-optimization |
 | `security-checklist.md` | security-and-hardening |
-| `accessibility-checklist.md` | frontend-ui-engineering |
+| `accessibility-checklist.md` | flutter-ui-engineering |
 | `definition-of-done.md` | all skills / every change |
 | `observability-checklist.md` | observability-and-instrumentation |
 | `orchestration-patterns.md` | doubt-driven-development |
