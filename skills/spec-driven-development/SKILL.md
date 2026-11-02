@@ -72,10 +72,11 @@ Start with a high-level vision. Ask the human clarifying questions until require
 
 ```
 ASSUMPTIONS I'M MAKING:
-1. This is a web application (not native mobile)
-2. Authentication uses session-based cookies (not JWT)
-3. The database is PostgreSQL (based on existing Prisma schema)
-4. We're targeting modern browsers only (no IE11)
+1. This is a Flutter app for iOS and Android (no web or desktop targets)
+2. Minimum supported versions are Android 8 (API 26) and iOS 15
+3. Authentication uses short-lived access tokens with a refresh token in secure storage
+4. The backend is the existing REST API on PostgreSQL, and it must keep working for released app versions
+5. The app should stay usable offline for reading, with writes queued and synced
 → Correct me now or I'll proceed with these.
 ```
 
@@ -87,19 +88,21 @@ Don't silently fill in ambiguous requirements. The spec's entire purpose is to s
 
 2. **Commands** — Full executable commands with flags, not just tool names.
    ```
-   Build: npm run build
-   Test: npm test -- --coverage
-   Lint: npm run lint --fix
-   Dev: npm run dev
+   Run: flutter run --flavor dev
+   Test: flutter test --coverage
+   Analyze: flutter analyze
+   Format: dart format .
+   Generate: dart run build_runner build -d
+   Build: flutter build appbundle --release
    ```
 
 3. **Project Structure** — Where source code lives, where tests go, where docs belong.
    ```
-   src/           → Application source code
-   src/components → React components
-   src/lib        → Shared utilities
-   tests/         → Unit and integration tests
-   e2e/           → End-to-end tests
+   lib/features/  → Feature folders (cubit, view, widgets, data)
+   lib/core/      → Shared utilities, theme, networking
+   test/          → Unit, Cubit, widget, and golden tests (mirrors lib/)
+   integration_test/ → End-to-end tests on a device
+   android/, ios/ → Platform projects (manifest, Info.plist, signing)
    docs/          → Documentation
    ```
 
@@ -108,9 +111,18 @@ Don't silently fill in ambiguous requirements. The spec's entire purpose is to s
 5. **Testing Strategy** — What framework, where tests live, coverage expectations, which test levels for which concerns.
 
 6. **Boundaries** — Three-tier system:
-   - **Always do:** Run tests before commits, follow naming conventions, validate inputs
-   - **Ask first:** Database schema changes, adding dependencies, changing CI config
-   - **Never do:** Commit secrets, edit vendor directories, remove failing tests without approval
+   - **Always do:** Run `flutter analyze` and tests before commits, follow naming conventions, validate inputs
+   - **Ask first:** Database schema or API contract changes, adding packages or SDKs, new permissions, changing CI config
+   - **Never do:** Commit secrets or keystores, edit generated files, remove failing tests without approval
+
+**For a mobile app, also settle these before writing the plan** (they change the design, and they're expensive to discover late):
+
+- **Targets:** platforms, minimum OS versions, phone and tablet support, orientations
+- **Offline and connectivity:** what works offline, how writes sync, how conflicts resolve
+- **Permissions and privacy:** which permissions, why, and what the store privacy declarations must say
+- **Accessibility and adaptivity:** TalkBack/VoiceOver support, large text, small screens
+- **Compatibility:** how the backend keeps serving released app versions, and the minimum supported app version
+- **Release:** flags and kill switches, staged rollout, and what "done" means for the stores (see `shipping-and-launch`)
 
 **Spec template:**
 

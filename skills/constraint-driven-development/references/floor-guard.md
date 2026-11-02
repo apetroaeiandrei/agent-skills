@@ -12,7 +12,7 @@ This is the reference. Adapt the patterns to your stack; keep the contract ident
 - **Reports the rule and the location, never the matched secret value.** Redaction is not optional (Step 4).
 - **Tightening is silent, loosening is loud:** only surfaces moves that lower the bar.
 
-## Reference (Node, ~stack-agnostic patterns)
+## Reference (Node script, stack-agnostic patterns)
 
 ```js
 #!/usr/bin/env node
@@ -54,11 +54,11 @@ const findings = [];
 const flag = (rule, f, text) => findings.push({ rule, file: f, text: text.trim().slice(0, 120) });
 
 // 1. Silenced checker — extend this list for your ecosystem.
-const SUPPRESSIONS = /@ts-ignore|@ts-nocheck|eslint-disable|biome-ignore|# *noqa|# *type: *ignore|istanbul ignore|nosemgrep|gitleaks:allow|Stryker disable/;
+const SUPPRESSIONS = /\/\/ *ignore(_for_file)?:|coverage:ignore-(line|file|start)|@ts-ignore|@ts-nocheck|eslint-disable|biome-ignore|# *noqa|# *type: *ignore|istanbul ignore|nosemgrep|gitleaks:allow|Stryker disable/;
 // 4. Unfinished work.
-const STUBS = /throw new (Error|NotImplemented).*[Nn]ot implemented|catch\s*\(\w*\)\s*\{\s*\}|catch\s*\{\s*\}|\bTODO\b|\bpass\s*# *stub/;
+const STUBS = /throw UnimplementedError|throw new (Error|NotImplemented).*[Nn]ot implemented|catch\s*\(\w*\)\s*\{\s*\}|catch\s*\{\s*\}|\bTODO\b|\bpass\s*# *stub/;
 // 2. A test made easier (added skips).
-const SKIPS = /\.(skip|todo)\b|\bxit\(|\bxdescribe\(|@pytest\.mark\.skip|t\.Skip\(/;
+const SKIPS = /\bskip:\s*(true|['"])|@Skip\(|\.(skip|todo)\b|\bxit\(|\bxdescribe\(|@pytest\.mark\.skip|t\.Skip\(/;
 
 for (const { file, text } of added) {
   if (SUPPRESSIONS.test(text)) flag('silenced-checker', file, text);
@@ -69,7 +69,7 @@ for (const { file, text } of added) {
 
 // 2b. Assertion removed from a test file that still exists.
 for (const { file, text } of removed) {
-  if (/\.(test|spec)\.|_test\.|test_/.test(file) && /\b(expect|assert|should)\b/.test(text)) {
+  if (/\.(test|spec)\.|_test\.|test_/.test(file) && /\b(expect|expectLater|verify|assert|should)\b/.test(text)) {
     flag('assertion-removed', file, text);
   }
 }
@@ -94,6 +94,6 @@ process.exit(1);
 
 ## Adapting it
 
-- **Patterns are the only stack-specific part.** Add your language's suppression and stub forms to the three regexes; the diff plumbing, the CONSTRAINTS.md checks, and the exit codes stay as-is.
+- **Patterns are the only stack-specific part.** The regexes above already cover Dart (`// ignore:`, `// ignore_for_file:`, `coverage:ignore-*`, `UnimplementedError`, `skip:` and `@Skip`, `_test.dart` files). For a Flutter-only repo you can port the script to Dart and run it with `dart run` to avoid a Node dependency; the contract is what matters. Add your language's suppression and stub forms to the three regexes; the diff plumbing, the CONSTRAINTS.md checks, and the exit codes stay as-is.
 - **A `.constraintsignore`** (one glob per line) lets you exempt a path the guard would otherwise flag; check each added line's file against it before flagging, so a genuine exception is a tracked file rather than a loosened rule.
 - **This is a starting point, not a finished tool.** It is deliberately regex-shallow: it catches the cheap-road-to-green moves agents actually make, not a determined human hiding a change. That is the right trade for a check that runs on every diff. Once you outgrow it, move to a real runner (Escalation Path level 3).

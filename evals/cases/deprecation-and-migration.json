@@ -21,6 +21,10 @@
       {
         "prompt": "How do I drop a column safely in production?",
         "top_k": 3
+      },
+      {
+        "prompt": "We want to drop support for old app versions and raise the minimum Android version, plan the deprecation",
+        "top_k": 3
       }
     ],
     "negative": [

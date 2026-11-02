@@ -105,15 +105,16 @@ PROPOSED → ACCEPTED → (SUPERSEDED or DEPRECATED)
 
 Comment the *why*, not the *what*:
 
-```typescript
+```dart
 // BAD: Restates the code
 // Increment counter by 1
 counter += 1;
 
 // GOOD: Explains non-obvious intent
-// Rate limit uses a sliding window — reset counter at window boundary,
-// not on a fixed schedule, to prevent burst attacks at window edges
-if (now - windowStart > WINDOW_SIZE_MS) {
+// Retry uses a sliding window — reset the counter at the window boundary,
+// not on a fixed schedule, so a flaky network can't trigger a burst of
+// retries at the window edge
+if (now.difference(windowStart) > windowSize) {
   counter = 0;
   windowStart = now;
 }
@@ -121,30 +122,32 @@ if (now - windowStart > WINDOW_SIZE_MS) {
 
 ### When NOT to Comment
 
-```typescript
+```dart
 // Don't comment self-explanatory code
-function calculateTotal(items: CartItem[]): number {
-  return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-}
+int calculateTotal(List<CartItem> items) =>
+    items.fold(0, (sum, item) => sum + item.price * item.quantity);
 
 // Don't leave TODO comments for things you should just do now
 // TODO: add error handling  ← Just add it
 
 // Don't leave commented-out code
-// const oldImplementation = () => { ... }  ← Delete it, git has history
+// final oldImplementation = () { ... };  ← Delete it, git has history
+
+// Don't silence the analyzer without saying why
+// ignore: avoid_print  ← Either fix it, or explain the exception
 ```
 
 ### Document Known Gotchas
 
-```typescript
-/**
- * IMPORTANT: This function must be called before the first render.
- * If called after hydration, it causes a flash of unstyled content
- * because the theme context isn't available during SSR.
- *
- * See ADR-003 for the full design rationale.
- */
-export function initializeTheme(theme: Theme): void {
+```dart
+/// IMPORTANT: Call this before `runApp`, after
+/// `WidgetsFlutterBinding.ensureInitialized()`.
+///
+/// If it runs after the first frame, the app flashes the default theme
+/// because the persisted theme is loaded asynchronously.
+///
+/// See ADR-003 for the full design rationale.
+Future<ThemeMode> loadInitialThemeMode() async {
   // ...
 }
 ```
@@ -153,25 +156,29 @@ export function initializeTheme(theme: Theme): void {
 
 For public APIs (REST, GraphQL, library interfaces):
 
-### Inline with Types (Preferred for TypeScript)
+### Dartdoc Comments (Preferred for Dart)
 
-```typescript
-/**
- * Creates a new task.
- *
- * @param input - Task creation data (title required, description optional)
- * @returns The created task with server-generated ID and timestamps
- * @throws {ValidationError} If title is empty or exceeds 200 characters
- * @throws {AuthenticationError} If the user is not authenticated
- *
- * @example
- * const task = await createTask({ title: 'Buy groceries' });
- * console.log(task.id); // "task_abc123"
- */
-export async function createTask(input: CreateTaskInput): Promise<Task> {
-  // ...
-}
+Use `///` doc comments on public APIs. Lead with a one-sentence summary, then details. Dartdoc renders Markdown, links symbols with `[Name]`, and `dart doc` builds the site:
+
+```dart
+/// Creates a new task.
+///
+/// The [input] must have a non-empty title of at most 200 characters.
+/// Returns the created [Task] with its server-generated ID and timestamps.
+///
+/// Throws a [ValidationException] if the title is invalid, and an
+/// [UnauthorizedException] if the user is not signed in.
+///
+/// ```dart
+/// final task = await repository.createTask(const CreateTaskInput(title: 'Buy groceries'));
+/// print(task.id); // "task_abc123"
+/// ```
+Future<Task> createTask(CreateTaskInput input);
 ```
+
+Document public widgets the same way: what it renders, when to use it over alternatives, and any constraints (for example, "must be placed under a [BlocProvider] of [TasksCubit]"). Turn on the `public_member_api_docs` lint for packages that other teams consume.
+
+### OpenAPI / Swagger for the Backend API
 
 ### OpenAPI / Swagger for REST APIs
 
@@ -208,17 +215,22 @@ One-paragraph description of what this project does.
 
 ## Quick Start
 1. Clone the repo
-2. Install dependencies: `npm install`
-3. Set up environment: `cp .env.example .env`
-4. Run the dev server: `npm run dev`
+2. Install the pinned Flutter SDK (`fvm install`, or the version in `pubspec.yaml`) and check `flutter doctor`
+3. Install dependencies: `flutter pub get`
+4. Generate code: `dart run build_runner build -d`
+5. Set up configuration: `cp config/dev.example.json config/dev.json`
+6. Run the app: `flutter run --flavor dev --dart-define-from-file=config/dev.json`
 
 ## Commands
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server |
-| `npm test` | Run tests |
-| `npm run build` | Production build |
-| `npm run lint` | Run linter |
+| `flutter run --flavor dev` | Run the app on a device or emulator |
+| `flutter test` | Run unit, Cubit, widget, and golden tests |
+| `flutter analyze` | Static analysis |
+| `dart format .` | Format code |
+| `dart run build_runner build -d` | Regenerate freezed and JSON code |
+| `flutter build appbundle --release` | Production Android build |
+| `flutter build ipa --release` | Production iOS build |
 
 ## Architecture
 Brief overview of the project structure and key design decisions.

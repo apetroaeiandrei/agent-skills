@@ -3,11 +3,11 @@
   "trigger": {
     "positive": [
       {
-        "prompt": "Set up a GitHub Actions pipeline that runs the tests on every pull request",
+        "prompt": "Set up a GitHub Actions pipeline that runs the Flutter tests on every pull request",
         "top_k": 3
       },
       {
-        "prompt": "Add a deploy stage to the pipeline with a manual approval gate",
+        "prompt": "Add a release stage to the pipeline that signs the app and uploads it to TestFlight",
         "top_k": 3
       },
       {
@@ -29,15 +29,16 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Create a CI pipeline for a Node project: install, lint, test on every PR, and block merge on failure.",
+      "prompt": "Create a CI pipeline for this Flutter app: install dependencies, check formatting, analyze, test on every PR, and block merge on failure.",
       "expected_output": "A working workflow definition with correct triggers, steps, and failure behavior",
       "files": [
         "ci-cd-and-automation"
       ],
       "expectations": [
         "The workflow triggers on pull requests",
-        "Failure of any quality gate fails the pipeline run",
-        "Steps are ordered logically and cache or setup steps are sane",
+        "Failure of any quality gate (format, analyze, test) fails the pipeline run",
+        "Steps are ordered logically: dependencies, then format/analyze, then tests, and the Flutter SDK setup and caching are sane",
+        "The Flutter SDK version is pinned or read from the project rather than floating",
         "No secrets are hardcoded in the workflow"
       ]
     }

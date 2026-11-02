@@ -1,0 +1,9 @@
+name: config_parser_fixture
+description: Config parser used to exercise behavior-preserving simplification.
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dev_dependencies:
+  test: ^1.25.0

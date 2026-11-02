@@ -1,0 +1,49 @@
+{
+  "skill_name": "flutter-devtools-and-device-testing",
+  "trigger": {
+    "positive": [
+      {
+        "prompt": "Use Flutter DevTools to figure out why tapping the checkout button does nothing",
+        "top_k": 3
+      },
+      {
+        "prompt": "Inspect the network requests the dashboard screen makes when it first loads on the emulator",
+        "top_k": 3
+      },
+      {
+        "prompt": "Run the app on the iOS simulator and verify the form submits and the data persists after a hot restart",
+        "top_k": 3
+      },
+      {
+        "prompt": "Use mobile-mcp to tap through onboarding on the Android emulator and take screenshots of each step",
+        "top_k": 3
+      }
+    ],
+    "negative": [
+      {
+        "prompt": "Write a spec for the new billing feature before we start",
+        "owner": "spec-driven-development"
+      },
+      {
+        "prompt": "Break this PRD into ordered implementation tasks",
+        "owner": "planning-and-task-breakdown"
+      }
+    ]
+  },
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "The signup form renders but submitting it appears to do nothing. Run the app on a device and report findings from the running app.",
+      "expected_output": "Runtime evidence from the running app: runtime errors and logs, network activity, widget tree state, and a diagnosis",
+      "files": [
+        "flutter-devtools-and-device-testing"
+      ],
+      "expectations": [
+        "Findings are grounded in observed runtime data (logs, network, widget tree), not static code reading alone",
+        "The report distinguishes what was observed from what is inferred",
+        "A concrete next step or fix hypothesis is provided",
+        "The agent drives the UI through the device (element list first, screenshots as fallback) rather than only reading source"
+      ]
+    }
+  ]
+}

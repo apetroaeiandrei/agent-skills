@@ -19,7 +19,11 @@
         "top_k": 3
       },
       {
-        "prompt": "Core Web Vitals are failing, improve our LCP",
+        "prompt": "The feed screen janks while scrolling, profile it and fix the frame times",
+        "top_k": 3
+      },
+      {
+        "prompt": "Slow startup: the app takes five seconds to show its first frame on mid-range phones, measure it and speed it up",
         "top_k": 3
       }
     ],
@@ -37,7 +41,7 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "The products page renders slowly with 1000 items. Improve its performance.",
+      "prompt": "The products screen builds slowly with 1000 items. Improve its performance.",
       "expected_output": "A measured baseline, an identified bottleneck, a targeted fix, a verified improvement, and a regression guard",
       "files": [
         "performance-optimization"
@@ -46,7 +50,7 @@
         "Performance is measured before any optimization is applied",
         "The fix targets the measured bottleneck rather than guessing",
         "Improvement is verified against the baseline after the change",
-        "A concrete guard is added after verification using a synthetic performance budget or field monitoring tied to the measured user-facing metric"
+        "A concrete guard is added after verification using a lab performance budget (for example a timeline or timing threshold in CI) or field monitoring tied to the measured user-facing metric"
       ]
     }
   ]

@@ -1,10 +1,13 @@
 # Session implementation task
 
-Implement server-side sessions for an Express 5 application. The project uses
-`express-session` and must follow the currently documented production approach
-for proxy settings, secure cookies, session stores, and secret configuration.
+Implement a settings form screen for this Flutter app: a Cubit that holds the
+form state as a freezed sealed union (editing, saving, saved, failure), and
+back-button handling that asks the user to confirm when there are unsaved
+changes. The dependency versions are in `pubspec.yaml`.
 
-Ground behavioral claims in official Express or `express-session`
-documentation and cite the exact pages used. Do not rely on remembered Express
-4 defaults. Flag any deployment-specific assumption that cannot be verified
-from the repository or official documentation.
+Follow the currently documented approach for the versions this project uses,
+for freezed class declarations and pattern matching, `flutter_bloc` widgets, and
+intercepting back navigation. Ground every framework claim in official Flutter,
+Dart, or package documentation and cite the exact pages used. Do not rely on
+remembered patterns from older major versions. Flag any assumption that cannot
+be verified from the repository or the official documentation.

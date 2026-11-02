@@ -34,9 +34,8 @@ description: Guides agents through [task/workflow]. Use when [specific trigger c
 
 Published names are compatibility identifiers. In particular,
 `browser-testing-with-devtools` is the stable upstream name because other
-skills refer to it directly. A downstream catalog may rename it, but that
-catalog owns the alias or migration mapping; downstream-only aliases are not
-maintained in this repository.
+skills refer to it directly. This mobile fork renamed it to
+`flutter-devtools-and-device-testing`; the fork owns that mapping, and no alias is kept.
 
 **Why this matters:** Agents discover skills by reading descriptions. The description is injected into the system prompt, so it must tell the agent both what the skill provides and when to activate it. Do not summarize the workflow — if the description contains process steps, the agent may follow the summary instead of reading the full skill.
 
@@ -89,7 +88,7 @@ Helps agents and humans decide if this skill applies to the current task. Includ
 ### Core Process
 The heart of the skill. This is the step-by-step workflow the agent follows. Must be specific and actionable — not vague advice.
 
-**Good:** "Run `npm test` and verify all tests pass"
+**Good:** "Run `flutter test` and verify all tests pass"
 **Bad:** "Make sure the tests work"
 
 ### Common Rationalizations
@@ -148,7 +147,7 @@ When a skill ships runnable helpers under `scripts/`, each script follows these 
 ## Writing Principles
 
 1. **Process over knowledge.** Skills are workflows, not reference docs. Steps, not facts.
-2. **Specific over general.** "Run `npm test`" beats "verify the tests".
+2. **Specific over general.** "Run `flutter test`" beats "verify the tests".
 3. **Evidence over assumption.** Every verification checkbox requires proof.
 4. **Anti-rationalization.** Every skip-worthy step needs a counter-argument in the rationalizations table.
 5. **Progressive disclosure.** Main SKILL.md is the entry point. Supporting files are loaded only when needed.

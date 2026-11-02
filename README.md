@@ -19,6 +19,22 @@ Skills encode the workflows, quality gates, and best practices that senior engin
 
 ---
 
+## Flutter Mobile Fork
+
+This fork adapts the pack for **Flutter mobile development** (iOS and Android). The lifecycle, commands, and skill structure are unchanged; the content is tailored to Flutter and Dart.
+
+**What changed**
+
+- **Renamed:** `browser-testing-with-devtools` → `flutter-devtools-and-device-testing` (Flutter DevTools, the Dart MCP server, and [mobile-mcp](https://github.com/mobile-next/mobile-mcp)), `frontend-ui-engineering` → `flutter-ui-engineering`, `web-performance-auditor` → `mobile-performance-auditor`, and `/webperf` → `/perf-mobile`.
+- **Tailored:** performance, security, testing, CI/CD, shipping and store releases, observability, API design, debugging, deprecation and migration, code review, simplification, and source-driven development now use Flutter, Dart, and mobile practices. The shared `references/` checklists are rewritten to match, and the backend material a mobile app depends on is kept.
+- **Unchanged:** interview, ideation, spec, planning, context engineering, doubt-driven development, git workflow, documentation, and constraints keep their process, with Flutter examples.
+
+**Conventions the skills assume:** Bloc with Cubit for state, [freezed](https://pub.dev/packages/freezed) for states and models (never Equatable, with `dart run build_runner build -d` after changing them), `go_router` for navigation, and the Dart MCP server plus mobile-mcp for running and driving the app.
+
+**Using this fork:** install from the Claude Code marketplace (`/plugin marketplace add apetroaeiandrei/agent-skills`, then `/plugin install agent-skills@flutter-agent-skills`) or clone it and run `claude --plugin-dir /path/to/agent-skills`. Install commands below point at this fork; the upstream repository, `addyosmani/agent-skills`, holds the original web versions of these skills.
+
+---
+
 ## Commands
 
 9 slash commands that map to the development lifecycle. Each one activates the right skills automatically.
@@ -31,13 +47,13 @@ Skills encode the workflows, quality gates, and best practices that senior engin
 | Prove it works | `/test` | Tests are proof |
 | Set the quality bar | `/constraints` | Decide it once, enforce it everywhere |
 | Review before merge | `/review` | Improve code health |
-| Audit web performance | `/webperf` | Measure before you optimize |
+| Audit mobile performance | `/perf-mobile` | Measure before you optimize |
 | Simplify the code | `/code-simplify` | Clarity over cleverness |
 | Ship to production | `/ship` | Faster is safer |
 
 Want fewer manual steps once the spec exists? **`/build auto`** generates the plan and implements every task in a single approved pass — you approve the plan once, then it runs autonomously. It removes the human stepping *between* tasks, not the verification: every task is still test-driven and committed individually, and it pauses on failures or risky steps.
 
-Skills also activate automatically based on what you're doing — designing an API triggers `api-and-interface-design`, building UI triggers `frontend-ui-engineering`, and so on.
+Skills also activate automatically based on what you're doing — designing an API triggers `api-and-interface-design`, building UI triggers `flutter-ui-engineering`, and so on.
 
 ---
 
@@ -46,16 +62,16 @@ Skills also activate automatically based on what you're doing — designing an A
 **Fastest path — any agent, one command.** The open [skills CLI](https://github.com/vercel-labs/skills) installs into 70+ agents (Claude Code, Cursor, Codex, Copilot, Cline, and more):
 
 ```bash
-npx skills add addyosmani/agent-skills            # install all 25 skills
-npx skills add addyosmani/agent-skills --list     # browse before installing
+npx skills add apetroaeiandrei/agent-skills            # install all 25 skills
+npx skills add apetroaeiandrei/agent-skills --list     # browse before installing
 ```
 
 Or grab individual skills:
 
 ```bash
-npx skills add addyosmani/agent-skills --skill code-review-and-quality   # five-axis review before merge
-npx skills add addyosmani/agent-skills --skill interview-me              # requirements interrogation, one question at a time
-npx skills add addyosmani/agent-skills --skill test-driven-development   # red-green-refactor, enforced
+npx skills add apetroaeiandrei/agent-skills --skill code-review-and-quality   # five-axis review before merge
+npx skills add apetroaeiandrei/agent-skills --skill interview-me              # requirements interrogation, one question at a time
+npx skills add apetroaeiandrei/agent-skills --skill test-driven-development   # red-green-refactor, enforced
 ```
 
 > **Installing one skill?** A per-skill `npx` install copies only
@@ -73,14 +89,14 @@ Prefer a native integration? Pick your tool below.
 **Marketplace install:**
 
 ```
-/plugin marketplace add addyosmani/agent-skills
-/plugin install agent-skills@addy-agent-skills
+/plugin marketplace add apetroaeiandrei/agent-skills
+/plugin install agent-skills@flutter-agent-skills
 ```
 
 > **SSH errors?** The marketplace clones repos via SSH. If you don't have SSH keys set up on GitHub, either [add your SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account) or use the full HTTPS URL to force HTTPS cloning during the marketplace-add step:
 > ```bash
-> /plugin marketplace add https://github.com/addyosmani/agent-skills.git
-> /plugin install agent-skills@addy-agent-skills
+> /plugin marketplace add https://github.com/apetroaeiandrei/agent-skills.git
+> /plugin install agent-skills@flutter-agent-skills
 > ```
 >
 > If `/plugin install` still fails with `git@github.com: Permission denied (publickey)` on Windows or macOS, the recommended workaround is to configure Git once to rewrite GitHub SSH URLs to HTTPS for subprocess clones:
@@ -91,7 +107,7 @@ Prefer a native integration? Pick your tool below.
 **Local / development:**
 
 ```bash
-git clone https://github.com/addyosmani/agent-skills.git
+git clone https://github.com/apetroaeiandrei/agent-skills.git
 claude --plugin-dir /path/to/agent-skills
 ```
 
@@ -112,13 +128,13 @@ Install as a native plugin for skills and subagents. In affected Antigravity CLI
 **Install from the repo:**
 
 ```bash
-agy plugin install https://github.com/addyosmani/agent-skills.git
+agy plugin install https://github.com/apetroaeiandrei/agent-skills.git
 ```
 
 **Install from a local clone:**
 
 ```bash
-git clone https://github.com/addyosmani/agent-skills.git
+git clone https://github.com/apetroaeiandrei/agent-skills.git
 agy plugin install ./agent-skills
 ```
 
@@ -132,7 +148,7 @@ Install as native skills for auto-discovery, or add to `GEMINI.md` for persisten
 **Install from the repo:**
 
 ```bash
-gemini skills install https://github.com/addyosmani/agent-skills.git --path skills
+gemini skills install https://github.com/apetroaeiandrei/agent-skills.git --path skills
 ```
 
 **Install from a local clone:**
@@ -179,7 +195,7 @@ Using the standalone `copilot` CLI? Install it as a plugin — see [docs/copilot
 Install as a native Codex plugin (Codex CLI v0.122+):
 
 ```bash
-codex plugin marketplace add addyosmani/agent-skills
+codex plugin marketplace add apetroaeiandrei/agent-skills
 codex plugin add agent-skills@agent-skills
 ```
 
@@ -193,9 +209,9 @@ The first command registers the marketplace; the second installs the plugin. Cod
 Install natively with the built-in `cmd skills` command. Command Code clones the repo, discovers every `SKILL.md`, and installs into `.commandcode/skills/`:
 
 ```bash
-cmd skills add addyosmani/agent-skills            # pick skills to install (project)
-cmd skills add addyosmani/agent-skills --global   # install for all projects (~/.commandcode/skills/)
-cmd skills add addyosmani/agent-skills -s spec-driven-development  # install a specific skill
+cmd skills add apetroaeiandrei/agent-skills            # pick skills to install (project)
+cmd skills add apetroaeiandrei/agent-skills --global   # install for all projects (~/.commandcode/skills/)
+cmd skills add apetroaeiandrei/agent-skills -s spec-driven-development  # install a specific skill
 ```
 
 Installed skills show up in the TUI slash menu, e.g. `/spec-driven-development`. See [docs/commandcode-setup.md](docs/commandcode-setup.md).
@@ -249,18 +265,18 @@ The commands above are entry points. The pack includes 25 skills total — 24 li
 | Skill | What It Does | Use When |
 |-------|-------------|----------|
 | [incremental-implementation](skills/incremental-implementation/SKILL.md) | Thin vertical slices - implement, test, verify, commit. Feature flags, safe defaults, rollback-friendly changes | Any change touching more than one file |
-| [test-driven-development](skills/test-driven-development/SKILL.md) | Red-Green-Refactor, test pyramid (80/15/5), test sizes, DAMP over DRY, Beyonce Rule, browser testing | Implementing logic, fixing bugs, or changing behavior |
+| [test-driven-development](skills/test-driven-development/SKILL.md) | Red-Green-Refactor, test pyramid (80/15/5), test sizes, DAMP over DRY, Beyonce Rule, Flutter widget and integration tests | Implementing logic, fixing bugs, or changing behavior |
 | [context-engineering](skills/context-engineering/SKILL.md) | Feed agents the right information at the right time - rules files, context packing, MCP integrations | Starting a session, switching tasks, or when output quality drops |
 | [source-driven-development](skills/source-driven-development/SKILL.md) | Ground every framework decision in official documentation - verify, cite sources, flag what's unverified | You want authoritative, source-cited code for any framework or library |
 | [doubt-driven-development](skills/doubt-driven-development/SKILL.md) | Adversarial fresh-context review of every non-trivial decision in-flight - CLAIM → EXTRACT → DOUBT → RECONCILE → STOP, with optional user-authorized cross-model escalation | Stakes are high (production, security, irreversible), working in unfamiliar code, or a confident output is cheaper to verify now than to debug later |
-| [frontend-ui-engineering](skills/frontend-ui-engineering/SKILL.md) | Component architecture, design systems, state management, responsive design, WCAG 2.1 AA accessibility | Building or modifying user-facing interfaces |
-| [api-and-interface-design](skills/api-and-interface-design/SKILL.md) | Contract-first design, Hyrum's Law, One-Version Rule, error semantics, boundary validation | Designing APIs, module boundaries, or public interfaces |
+| [flutter-ui-engineering](skills/flutter-ui-engineering/SKILL.md) | Widget architecture, theming and design systems, Bloc/Cubit state, navigation, adaptive layout, WCAG 2.1 AA and platform accessibility | Building or modifying user-facing interfaces |
+| [api-and-interface-design](skills/api-and-interface-design/SKILL.md) | Contract-first design, Hyrum's Law, One-Version Rule, error semantics, boundary validation, mobile-client compatibility, Dart interface patterns | Designing APIs, app-to-backend contracts, module boundaries, or public interfaces |
 
 ### Verify - Prove it works
 
 | Skill | What It Does | Use When |
 |-------|-------------|----------|
-| [browser-testing-with-devtools](skills/browser-testing-with-devtools/SKILL.md) | Chrome DevTools MCP for live runtime data - DOM inspection, console logs, network traces, performance profiling | Building or debugging anything that runs in a browser |
+| [flutter-devtools-and-device-testing](skills/flutter-devtools-and-device-testing/SKILL.md) | Flutter DevTools, the Dart MCP server, and mobile-mcp for live runtime data and device control - widget inspection, UI driving, screenshots, runtime errors and device logs, network traces, frame profiling | Building or debugging anything that runs in a Flutter app |
 | [debugging-and-error-recovery](skills/debugging-and-error-recovery/SKILL.md) | Five-step triage: reproduce, localize, reduce, fix, guard. Stop-the-line rule, safe fallbacks | Tests fail, builds break, or behavior is unexpected |
 
 ### Review - Quality gates before merge
@@ -269,19 +285,19 @@ The commands above are entry points. The pack includes 25 skills total — 24 li
 |-------|-------------|----------|
 | [code-review-and-quality](skills/code-review-and-quality/SKILL.md) | Five-axis review, change sizing (~100 lines), severity labels (Nit/Optional/FYI), review speed norms, splitting strategies | Before merging any change |
 | [code-simplification](skills/code-simplification/SKILL.md) | Chesterton's Fence, Rule of 500, reduce complexity while preserving exact behavior | Code works but is harder to read or maintain than it should be |
-| [security-and-hardening](skills/security-and-hardening/SKILL.md) | OWASP Top 10 prevention, auth patterns, secrets management, dependency auditing, three-tier boundary system | Handling user input, auth, data storage, or external integrations |
-| [performance-optimization](skills/performance-optimization/SKILL.md) | Measure-first approach - Core Web Vitals targets, profiling workflows, bundle analysis, anti-pattern detection | Performance requirements exist or you suspect regressions |
+| [security-and-hardening](skills/security-and-hardening/SKILL.md) | OWASP Mobile Top 10 / MASVS, secure storage, auth and biometrics, TLS and pinning, deep links, secrets and binary protections, pub supply chain, backend patterns, three-tier boundary system | Handling user input, auth, token storage, deep links, releases, or external integrations |
+| [performance-optimization](skills/performance-optimization/SKILL.md) | Measure-first approach - Flutter frame/startup/size/memory targets, profile-mode workflows, backend query and cache anti-patterns | Performance requirements exist or you suspect regressions |
 
 ### Ship - Deploy with confidence
 
 | Skill | What It Does | Use When |
 |-------|-------------|----------|
 | [git-workflow-and-versioning](skills/git-workflow-and-versioning/SKILL.md) | Trunk-based development, atomic commits, change sizing (~100 lines), the commit-as-save-point pattern | Making any code change (always) |
-| [ci-cd-and-automation](skills/ci-cd-and-automation/SKILL.md) | Shift Left, Faster is Safer, feature flags, quality gate pipelines, failure feedback loops | Setting up or modifying build and deploy pipelines |
+| [ci-cd-and-automation](skills/ci-cd-and-automation/SKILL.md) | Shift Left, Faster is Safer, Flutter quality gates, signing and store releases, feature flags and staged rollouts, failure feedback loops | Setting up or modifying build, signing, and release pipelines |
 | [deprecation-and-migration](skills/deprecation-and-migration/SKILL.md) | Code-as-liability mindset, compulsory vs advisory deprecation, migration patterns, zombie code removal | Removing old systems, migrating users, or sunsetting features |
 | [documentation-and-adrs](skills/documentation-and-adrs/SKILL.md) | Architecture Decision Records, API docs, inline documentation standards - document the *why* | Making architectural decisions, changing APIs, or shipping features |
-| [observability-and-instrumentation](skills/observability-and-instrumentation/SKILL.md) | Structured logging, RED metrics, OpenTelemetry tracing, symptom-based alerting - instrument as you build | Adding telemetry, or shipping anything that runs in production |
-| [shipping-and-launch](skills/shipping-and-launch/SKILL.md) | Pre-launch checklists, feature flag lifecycle, staged rollouts, rollback procedures, monitoring setup | Preparing to deploy to production |
+| [observability-and-instrumentation](skills/observability-and-instrumentation/SKILL.md) | Structured logging and app-version tagging, crash/ANR reporting with symbols, consent-aware offline-safe analytics, RED metrics, tracing, symptom-based alerting - instrument as you build | Adding telemetry, or shipping anything that runs on users' devices |
+| [shipping-and-launch](skills/shipping-and-launch/SKILL.md) | Pre-launch and store-readiness checklists, feature flags and kill switches, staged/phased rollouts, recovery plans for apps that can't be recalled, crash monitoring | Preparing an app release for the App Store or Google Play |
 
 ---
 
@@ -291,10 +307,10 @@ Pre-configured specialist personas for targeted reviews:
 
 | Agent | Role | Perspective |
 |-------|------|-------------|
-| [code-reviewer](agents/code-reviewer.md) | Senior Staff Engineer | Five-axis code review with "would a staff engineer approve this?" standard |
-| [test-engineer](agents/test-engineer.md) | QA Specialist | Test strategy, coverage analysis, and the Prove-It pattern |
-| [security-auditor](agents/security-auditor.md) | Security Engineer | Vulnerability detection, threat modeling, OWASP assessment |
-| [web-performance-auditor](agents/web-performance-auditor.md) | Web Performance Engineer | Core Web Vitals audit with Quick/Deep modes and a metric-honesty rule; run it via `/webperf` |
+| [code-reviewer](agents/code-reviewer.md) | Senior Staff Engineer | Five-axis code review with Flutter checks and the "would a staff engineer approve this?" standard |
+| [test-engineer](agents/test-engineer.md) | QA Specialist | Flutter test strategy (unit, Cubit, widget, golden, integration), coverage analysis, and the Prove-It pattern |
+| [security-auditor](agents/security-auditor.md) | Security Engineer | Mobile vulnerability detection, threat modeling, OWASP Mobile Top 10 assessment |
+| [mobile-performance-auditor](agents/mobile-performance-auditor.md) | Mobile Performance Engineer | Flutter frame, startup, memory, size, and battery audit with Quick/Deep modes and a metric-honesty rule; run it via `/perf-mobile` |
 
 See [docs/agents.md](docs/agents.md) for the decision matrix, orchestration rules, and how personas compose with skills and slash commands.
 
@@ -307,11 +323,11 @@ Quick-reference material that skills pull in when needed:
 | Reference | Covers |
 |-----------|--------|
 | [definition-of-done.md](references/definition-of-done.md) | Project-wide standing bar every change clears, contrasted with per-task acceptance criteria |
-| [testing-patterns.md](references/testing-patterns.md) | Test structure, naming, mocking, React/API/E2E examples, anti-patterns (JavaScript/TypeScript) |
-| [security-checklist.md](references/security-checklist.md) | Pre-commit checks, auth, input validation, headers, CORS, OWASP Top 10 |
-| [performance-checklist.md](references/performance-checklist.md) | Core Web Vitals targets, frontend/backend checklists, measurement commands |
-| [accessibility-checklist.md](references/accessibility-checklist.md) | Keyboard nav, screen readers, visual design, ARIA, testing tools |
-| [observability-checklist.md](references/observability-checklist.md) | On-call questions, structured logging, RED/USE metrics, tracing, symptom-based alerting, pre-launch gate |
+| [testing-patterns.md](references/testing-patterns.md) | Test structure, matchers, mocking (mocktail), Cubit, widget, golden, HTTP, and integration test examples, anti-patterns (Flutter/Dart) |
+| [security-checklist.md](references/security-checklist.md) | Pre-commit checks, auth and sessions, secure storage and communication, deep links and input validation, platform configuration, secrets and binary protections, pub supply chain, OWASP Mobile Top 10 |
+| [performance-checklist.md](references/performance-checklist.md) | Mobile performance targets, startup diagnosis, Flutter app checklist, backend and caching checklists, measurement commands |
+| [accessibility-checklist.md](references/accessibility-checklist.md) | TalkBack and VoiceOver, Semantics, focus and switch access, touch targets, text scaling, forms, testing guidelines |
+| [observability-checklist.md](references/observability-checklist.md) | On-call questions, structured logging, mobile app telemetry, RED/USE metrics, tracing, symptom-based alerting, pre-launch gate |
 | [orchestration-patterns.md](references/orchestration-patterns.md) | Endorsed multi-persona orchestration patterns, anti-patterns, and the "personas don't invoke personas" rule |
 
 ---

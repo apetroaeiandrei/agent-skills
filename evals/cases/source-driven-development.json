@@ -3,7 +3,7 @@
   "trigger": {
     "positive": [
       {
-        "prompt": "Verify against the official Next.js docs before implementing this",
+        "prompt": "Verify against the official Flutter docs and the freezed changelog before implementing this",
         "top_k": 3
       },
       {
@@ -29,15 +29,16 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Implement session handling with the framework's recommended approach, citing sources.",
+      "prompt": "Implement the settings form Cubit and back-button handling from the task note, citing sources.",
       "expected_output": "An implementation grounded in official documentation with citations, flagging anything unverified",
       "files": [
         "source-driven-development"
       ],
       "expectations": [
-        "Claims about framework behavior cite official documentation",
+        "The Flutter/Dart SDK and package versions are read from pubspec.yaml (and pubspec.lock if present) before implementing",
+        "Claims about framework and package behavior cite official documentation with full URLs",
         "Unverified assumptions are flagged rather than presented as fact",
-        "Deprecated patterns are avoided in favor of documented current ones"
+        "Deprecated or older-major-version patterns (WillPopScope, freezed 2.x when/map) are avoided in favor of documented current ones"
       ]
     }
   ]

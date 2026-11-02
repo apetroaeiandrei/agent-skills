@@ -16,7 +16,7 @@ body:
       description: Which skill did not work as expected?
       options:
         - api-and-interface-design
-        - browser-testing-with-devtools
+        - flutter-devtools-and-device-testing
         - ci-cd-and-automation
         - code-review-and-quality
         - code-simplification
@@ -25,7 +25,7 @@ body:
         - deprecation-and-migration
         - documentation-and-adrs
         - doubt-driven-development
-        - frontend-ui-engineering
+        - flutter-ui-engineering
         - git-workflow-and-versioning
         - idea-refine
         - incremental-implementation

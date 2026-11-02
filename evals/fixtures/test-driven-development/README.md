@@ -6,7 +6,7 @@ library never touches floating point.
 
 ## API
 
-`splitCents(totalCents, n)` returns an array of `n` integer cent amounts.
+`splitCents(totalCents, n)` returns a list of `n` integer cent amounts.
 `totalCents` is a non-negative integer, `n` is a positive integer.
 
 ## Invariants
@@ -24,5 +24,5 @@ For example, `splitCents(100, 7)` is `[15, 15, 14, 14, 14, 14, 14]`.
 ## Tests
 
 ```
-npm test
+dart test
 ```

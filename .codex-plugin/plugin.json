@@ -6,14 +6,14 @@
     "name": "Addy Osmani",
     "url": "https://github.com/addyosmani"
   },
-  "homepage": "https://github.com/addyosmani/agent-skills",
-  "repository": "https://github.com/addyosmani/agent-skills",
+  "homepage": "https://github.com/apetroaeiandrei/agent-skills",
+  "repository": "https://github.com/apetroaeiandrei/agent-skills",
   "license": "MIT",
   "skills": "./skills/",
   "interface": {
     "displayName": "Agent Skills",
     "shortDescription": "Senior-engineer workflows for AI coding agents: spec, plan, build, test, review, ship.",
-    "longDescription": "Agent Skills bundles 24 production engineering workflows from Addy Osmani, covering requirements, planning, implementation, testing, review, and shipping.",
+    "longDescription": "Agent Skills bundles 25 production engineering workflows for Flutter mobile development, forked from Addy Osmani's agent-skills, covering requirements, planning, implementation, testing, review, and shipping.",
     "developerName": "Addy Osmani",
     "category": "Productivity",
     "capabilities": [

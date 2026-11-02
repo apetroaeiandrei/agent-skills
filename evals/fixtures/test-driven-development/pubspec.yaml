@@ -1,0 +1,10 @@
+name: split_payment
+description: Splits an amount in integer cents into fair shares.
+version: 1.2.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dev_dependencies:
+  test: ^1.25.0

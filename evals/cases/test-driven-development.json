@@ -11,7 +11,7 @@
         "top_k": 3
       },
       {
-        "prompt": "What tests should cover this new parsing logic before I write it?",
+        "prompt": "What tests should cover this new Cubit and its widget before I write it?",
         "top_k": 3
       }
     ],
@@ -35,7 +35,7 @@
         "test-driven-development"
       ],
       "expectations": [
-        "A test reproducing the lost-cent case from BUG.md is added and shown failing before src/split.js is modified",
+        "A test reproducing the lost-cent case from BUG.md is added and shown failing before lib/split.dart is modified",
         "The final implementation satisfies the full README fairness invariant (leftover cents go to the earliest shares): splitCents(10000, 3) returns [3334, 3333, 3333] as BUG.md expects and splitCents(100, 7) returns [15, 15, 14, 14, 14, 14, 14] as the README example shows; dumping the whole remainder on a single share would violate both",
         "The fairness invariant from the README has its own test case in the suite on an input with remainder of at least 2 (such as splitCents(100, 7)), where dumping the whole remainder on one share would fail it, beyond the reported lost-cent case",
         "The full suite is run with the repository's own command after the fix"

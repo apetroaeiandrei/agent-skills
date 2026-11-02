@@ -1,6 +1,6 @@
 ---
 name: deprecation-and-migration
-description: Manages deprecation and migration. Use when removing old systems, APIs, or features. Use when migrating users from one implementation to another. Use when migrating a database schema in production, such as renaming or dropping a column without downtime (expand/contract). Use when deciding whether to maintain or sunset existing code.
+description: Manages deprecation and migration. Use when removing old systems, APIs, or features, including an API version that old app versions still call. Use when migrating users from one implementation to another, raising the minimum supported app or OS version, or upgrading Flutter, Dart, or packages. Use when migrating a database schema in production, or a local on-device database, such as renaming or dropping a column without downtime (expand/contract). Use when deciding whether to maintain or sunset existing code.
 ---
 
 # Deprecation and Migration
@@ -19,6 +19,10 @@ Most engineering organizations are good at building things. Few are good at remo
 - Removing dead code that nobody owns but everybody depends on
 - Planning the lifecycle of a new system (deprecation planning starts at design time)
 - Deciding whether to maintain a legacy system or invest in migration
+- Removing an API version, field, or endpoint that released app versions still use
+- Raising the minimum supported app version, Android `minSdk`, or iOS deployment target
+- Upgrading the Flutter/Dart SDK or replacing a package
+- Changing the schema of data stored on users' devices
 
 ## Core Principles
 
@@ -189,6 +193,77 @@ Each step is independently deployable and reversible: if step 4 misbehaves, roll
 - **Build large indexes without blocking writes** (e.g. Postgres `CREATE INDEX CONCURRENTLY`).
 - **Decouple from code by feature flag** when the cutover is risky, exactly as in the Feature Flag Migration pattern above.
 
+## Deprecation and Migration on Mobile
+
+Everything above applies, but mobile changes the timeline. **You don't control which version of the client is running.** Users update when they choose to, so an old app version can keep calling your API for months, and a deprecation that would take a week for a web app takes a release cycle plus an adoption tail.
+
+### Removing Server Behavior Old Apps Use
+
+- **Measure by app version before removing anything.** Have the app send its version on every request (see `api-and-interface-design`), and count calls per endpoint, field, and version. "Zero active usage" means zero from *supported* app versions, and a small, decided residue from unsupported ones.
+- **Expand, then contract.** Add the replacement, ship apps that use it, then remove the old behavior only after the last app version that needs it is out of support.
+- **Announce in machine-readable form too.** A `Deprecation`/`Sunset` response header (see RFC 8594) helps other consumers and your own monitoring notice.
+
+### Dropping an App or OS Version
+
+Raising the minimum supported app version, Android `minSdk`, or iOS deployment target is a compulsory deprecation of the users on old versions. Treat it that way:
+
+1. **Quantify the affected users** from analytics and store consoles (version and OS distribution).
+2. **Prompt before you force.** Show an in-app update prompt driven by remote configuration first, and switch to a blocking update screen only when you must.
+3. **Give the support window a stated length** and a date, and communicate it in release notes and to support.
+4. **Remove the compatibility code** (old API handling, OS-version branches, legacy migrations) only after usage of the dropped versions is below the threshold you set.
+
+Store requirements (for example the minimum target API level on Google Play) are compulsory deprecations imposed on you. Track their dates the way you track your own.
+
+### On-Device Data Migrations
+
+Local data (a database, files, preferences) is migrated **on the user's device, when the app updates**, and you can't roll it back by reverting a deploy. The expand/contract discipline below applies, with harder constraints:
+
+- **Version the schema and write explicit migrations** for each step (`onUpgrade` for the database library you use). Never rely on "delete and recreate" for data users care about.
+- **Test the upgrade path from every supported previous version**, not only the latest: install the old build, create data, upgrade, and verify. Keep fixtures of old databases for this.
+- **Make migrations idempotent and resumable.** The app can be killed mid-migration. A half-migrated database must not brick the app on the next launch.
+- **Back up before a destructive step**, and have a defined behavior on failure (keep the old data, report the error, fall back to a safe state).
+- **Keep old migrations until the versions that need them are unsupported.** Removing them strands users who skipped releases.
+- **Big migrations cost startup time.** Run them off the UI isolate where possible, with progress the user can see, and measure them (see `performance-optimization`).
+
+### Deprecating Dart APIs
+
+For your own packages and modules, use the language's tooling so consumers get a compiler-assisted migration rather than a memo:
+
+```dart
+@Deprecated('Use TaskRepository.listTasks(cursor:) instead. Will be removed in 3.0.0.')
+Future<List<Task>> fetchAllTasks() => _legacyFetch();
+```
+
+The analyzer flags every use of a deprecated member. For larger changes, provide **data-driven fixes** (`fix_data.yaml`) so consumers can run `dart fix --apply` to migrate automatically. That is the Churn Rule in practice: don't announce a deprecation and leave callers to work it out.
+
+To swap an implementation behind a stable contract (an HTTP client, a storage package), put an adapter behind the repository interface and migrate one consumer at a time:
+
+```dart
+// Old contract, new implementation: consumers don't change while the backend moves
+class DioTaskRepository implements TaskRepository {
+  DioTaskRepository(this._client);
+  final Dio _client;
+
+  @override
+  Future<Task> getTask(TaskId id) async {
+    final response = await _client.get<Map<String, Object?>>('/api/tasks/${id.value}');
+    return TaskDto.fromJson(response.data!).toDomain();
+  }
+  // ...
+}
+```
+
+### Upgrading Flutter, Dart, and Packages
+
+Upgrades are migrations. Treat them as small, verified, reversible steps:
+
+1. **Upgrade in its own pull request.** Don't mix an SDK bump with feature work.
+2. **Read the breaking changes** for each version between yours and the target (Flutter publishes them), and go one major version at a time when the gap is large.
+3. **Let the tools do the mechanical work:** `dart fix --apply`, `flutter pub outdated`, `dart pub upgrade --major-versions`, then `dart run build_runner build -d` and `flutter analyze`.
+4. **Verify both platforms in CI** (analyze, tests, Android and iOS builds), and smoke-test on real devices. Gradle, Kotlin, Xcode, and CocoaPods requirements often move with the SDK.
+5. **Pin the new version** (`environment: flutter:` or `.fvmrc`) so local and CI stay in step.
+6. **Replace abandoned or risky packages behind an adapter** and one consumer at a time, and remove the old dependency and its native configuration and permissions when done.
+
 ## Zombie Code
 
 Zombie code is code that nobody owns but everybody depends on. It's not actively maintained, has no clear owner, and accumulates security vulnerabilities and compatibility issues. Signs:
@@ -210,6 +285,9 @@ Zombie code is code that nobody owns but everybody depends on. It's not actively
 | "The migration is too expensive" | Compare migration cost to ongoing maintenance cost over 2-3 years. Migration is usually cheaper long-term. |
 | "We'll deprecate it after we finish the new system" | Deprecation planning starts at design time. By the time the new system is done, you'll have new priorities. Plan now. |
 | "Users will migrate on their own" | They won't. Provide tooling, documentation, and incentives — or do the migration yourself (the Churn Rule). |
+| "Everyone updates the app within a few weeks" | A long tail stays on old versions for months. Measure usage by app version before removing anything old apps call. |
+| "We'll just force everyone to update" | It strands users on old OS versions, spikes support load, and can be a store-visible regression. Quantify, prompt, then force. |
+| "The on-device migration is simple, no need to test old versions" | Users skip releases. An untested upgrade path from version N-3 is how an update wipes or bricks local data. |
 | "We can maintain both systems indefinitely" | Two systems doing the same thing is double the maintenance, testing, documentation, and onboarding cost. |
 | "Just rename the column, it's one line" | During the rollout, old and new code run together — one will query a column that no longer exists. Expand/contract, never rename in place. |
 | "I'll add the column and drop the old one in the same migration" | That couples a safe add to a destructive drop. Drops get their own deploy, after no code references the old shape. |
@@ -227,6 +305,10 @@ Zombie code is code that nobody owns but everybody depends on. It's not actively
 - A schema change and the code that depends on it shipped in the same deploy
 - A column renamed or dropped in place rather than via expand/contract
 - A migration merged with no tested down path, or a backfill that locks the table
+- Removing a field, endpoint, or enum value without checking usage by app version
+- Bumping `minSdk`, the iOS deployment target, or the minimum app version without quantifying affected users
+- An on-device migration tested only from the previous release, or that can leave the database half-migrated after a crash
+- An SDK or package upgrade bundled with unrelated feature changes, or verified on only one platform
 
 ## Verification
 
@@ -238,6 +320,22 @@ After completing a deprecation:
 - [ ] Old code, tests, documentation, and configuration are fully removed
 - [ ] No references to the deprecated system remain in the codebase
 - [ ] Deprecation notices are removed (they served their purpose)
+
+After removing server behavior or dropping app/OS support:
+
+- [ ] Usage was measured per app version, and the remaining usage is only from versions outside the support window
+- [ ] The affected users were quantified, and a prompt-then-force plan and dates were communicated
+- [ ] Compatibility code for the dropped versions was removed after the threshold was met
+
+After an on-device data migration:
+
+- [ ] The upgrade path was tested from every supported previous version, with fixtures of old data
+- [ ] The migration is idempotent and safe if interrupted, and failure leaves the app usable
+
+After an SDK or package upgrade:
+
+- [ ] The upgrade shipped in its own change, and `dart fix`, `flutter analyze`, and code generation are clean
+- [ ] Tests, and Android and iOS builds, pass in CI, and the flow was smoke-tested on devices
 
 After a database schema migration:
 

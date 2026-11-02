@@ -1,0 +1,52 @@
+{
+  "skill_name": "flutter-ui-engineering",
+  "trigger": {
+    "positive": [
+      {
+        "prompt": "Make this screen adaptive for tablets and accessible with TalkBack and VoiceOver",
+        "top_k": 1
+      },
+      {
+        "prompt": "Build an accessible bottom sheet widget with Semantics and proper focus handling",
+        "top_k": 3
+      },
+      {
+        "prompt": "Make the pricing screen accessible and adaptive on small phones and large text sizes",
+        "top_k": 1
+      },
+      {
+        "prompt": "Refactor the dashboard screen into reusable widgets with sane Cubit state management",
+        "top_k": 3
+      },
+      {
+        "prompt": "Rework the profile screen into reusable widgets with proper state management and theming",
+        "top_k": 3
+      }
+    ],
+    "negative": [
+      {
+        "prompt": "Optimize the slow database indexes",
+        "owner": "performance-optimization"
+      },
+      {
+        "prompt": "Tag and publish the release"
+      }
+    ]
+  },
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Build a dropdown menu widget for the design system.",
+      "expected_output": "An accessible, Semantics-aware widget following project conventions",
+      "files": [
+        "flutter-ui-engineering"
+      ],
+      "expectations": [
+        "Keyboard/back-button interaction and focus return are implemented, not just touch handling",
+        "Semantics (labels, roles, minimum touch targets) are applied correctly",
+        "Colors, text styles, and spacing come from the theme and design-system constants rather than hard-coded values",
+        "Widget state is managed deliberately (ephemeral state local, feature logic in a Cubit) rather than ad hoc"
+      ]
+    }
+  ]
+}

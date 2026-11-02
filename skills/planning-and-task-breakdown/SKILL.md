@@ -43,9 +43,9 @@ Database schema
     │       │
     │       ├── API endpoints
     │       │       │
-    │       │       └── Frontend API client
+    │       │       └── App repository / API client
     │       │               │
-    │       │               └── UI components
+    │       │               └── Cubits and screens
     │       │
     │       └── Validation logic
     │
@@ -97,8 +97,8 @@ Each task follows this structure, whether it lands in the markdown task list or 
 **Dependencies:** [Task numbers this depends on, or "None"]
 
 **Files likely touched:**
-- `src/path/to/file.ts`
-- `tests/path/to/test.ts`
+- `lib/path/to/file.dart`
+- `test/path/to/file_test.dart`
 
 **Estimated scope:** [Small: 1-2 files | Medium: 3-5 files | Large: 5+ files]
 ```

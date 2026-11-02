@@ -68,14 +68,14 @@ Commit messages explain the *why*, not just the *what*:
 
 ```
 # Good: Explains intent
-feat: add email validation to registration endpoint
+feat: add email validation to the registration form
 
-Prevents invalid email formats from reaching the database.
-Uses Zod schema validation at the route handler level,
-consistent with existing validation patterns in auth.ts.
+Prevents invalid email formats from reaching the API.
+Uses a shared validator on the form field, consistent with
+existing validation patterns in login_form.dart.
 
 # Bad: Describes what's obvious from the diff
-update auth.ts
+update register_form.dart
 ```
 
 **Format:**
@@ -194,16 +194,16 @@ After any modification, provide a structured summary. This makes review easier, 
 
 ```
 CHANGES MADE:
-- src/routes/tasks.ts: Added validation middleware to POST endpoint
-- src/lib/validation.ts: Added TaskCreateSchema using Zod
+- lib/features/tasks/cubit/tasks_cubit.dart: Added title validation before create
+- lib/core/validators.dart: Added taskTitleValidator
 
 THINGS I DIDN'T TOUCH (intentionally):
-- src/routes/auth.ts: Has similar validation gap but out of scope
-- src/middleware/error.ts: Error format could be improved (separate task)
+- lib/features/auth/data/auth_repository.dart: Has a similar validation gap but out of scope
+- lib/core/error_mapper.dart: Error format could be improved (separate task)
 
 POTENTIAL CONCERNS:
-- The Zod schema is strict — rejects extra fields. Confirm this is desired.
-- Added zod as a dependency (72KB gzipped) — already in package.json
+- The validator is strict, so it rejects titles over 200 characters. Confirm this is desired.
+- No new packages were added (pubspec.yaml is unchanged)
 ```
 
 This pattern catches wrong assumptions early and gives reviewers a clear map of the change. The "DIDN'T TOUCH" section is especially important — it shows you exercised scope discipline and didn't go on an unsolicited renovation.
@@ -219,33 +219,38 @@ git diff --staged
 # 2. Ensure no secrets
 git diff --staged | grep -i "password\|secret\|api_key\|token"
 
-# 3. Run tests
-npm test
+# 3. Regenerate code if freezed or JSON classes changed
+dart run build_runner build -d
 
-# 4. Run linting
-npm run lint
+# 4. Check formatting and analysis
+dart format --output=none --set-exit-if-changed .
+flutter analyze
 
-# 5. Run type checking
-npx tsc --noEmit
+# 5. Run tests
+flutter test
 ```
 
-Automate this with git hooks:
+Automate the fast checks with git hooks (Lefthook shown; use whatever the project already uses):
 
-```json
-// package.json (using lint-staged + husky)
-{
-  "lint-staged": {
-    "*.{ts,tsx}": ["eslint --fix", "prettier --write"],
-    "*.{json,md}": ["prettier --write"]
-  }
-}
+```yaml
+# lefthook.yml
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "*.dart"
+      run: dart format --output=none --set-exit-if-changed {staged_files}
+    analyze:
+      run: flutter analyze
 ```
+
+Keep hooks fast (seconds). Run the full test suite in CI, or in a pre-push hook.
 
 ## Handling Generated Files
 
-- **Commit generated files** only if the project expects them (e.g., `package-lock.json`, Prisma migrations)
-- **Don't commit** build output (`dist/`, `.next/`), environment files (`.env`), or IDE config (`.vscode/settings.json` unless shared)
-- **Have a `.gitignore`** that covers: `node_modules/`, `dist/`, `.env`, `.env.local`, `*.pem`
+- **Commit `pubspec.lock`** for apps (it pins what ships), and `ios/Podfile.lock`. Generated Dart files (`*.freezed.dart`, `*.g.dart`) are either committed or generated in CI, per the project's convention: pick one and be consistent, and never hand-edit them
+- **Don't commit** build output (`build/`, `.dart_tool/`, `coverage/`), environment files (`.env`), signing material (`*.jks`, `*.keystore`, `key.properties`, `*.p8`), local platform config (`android/local.properties`, `ios/Pods/` if the project regenerates it), or IDE config (`.idea/`, `.vscode/settings.json` unless shared)
+- **Have a `.gitignore`** that covers: `build/`, `.dart_tool/`, `.env`, `.env.local`, `*.pem`, `*.jks`, `*.keystore`, `key.properties`
 
 ## Using Git for Debugging
 
@@ -258,10 +263,10 @@ git bisect good <known-good-commit>
 
 # View what changed recently
 git log --oneline -20
-git diff HEAD~5..HEAD -- src/
+git diff HEAD~5..HEAD -- lib/
 
 # Find who last changed a specific line
-git blame src/services/task.ts
+git blame lib/features/tasks/task_repository.dart
 
 # Search commit messages for a keyword
 git log --grep="validation" --oneline
@@ -293,6 +298,8 @@ git push origin v1.4.0
 ```
 
 Derive the version from the tag rather than hand-editing it in scattered files, so the artifact, the tag, and the changelog can never disagree.
+
+**Mobile apps have two numbers.** `pubspec.yaml`'s `version: 1.4.0+27` is a human-readable *build name* (semantic, what users see) plus a *build number* (an integer the stores require to be **unique and increasing for every upload**). Keep the build name in the tag, and derive the build number from CI (for example the run number) rather than editing it by hand. A consumer of an app is an installed copy that may lag for months, so treat breaking API changes with the compatibility rules in `api-and-interface-design` and `deprecation-and-migration`. See `ci-cd-and-automation` for automating this.
 
 ### Keep a changelog written for humans
 
@@ -330,7 +337,8 @@ Write the entry in the same change that makes the change, while the impact is fr
 - Commit messages like "fix", "update", "misc"
 - Formatting changes mixed with behavior changes
 - No `.gitignore` in the project
-- Committing `node_modules/`, `.env`, or build artifacts
+- Committing `build/`, `.dart_tool/`, `.env`, keystores, or other build artifacts and secrets
+- Hand-edited generated files, or generated files committed stale relative to their sources
 - Long-lived branches that diverge significantly from main
 - Force-pushing to shared branches
 - A breaking change shipped under a minor or patch version bump
