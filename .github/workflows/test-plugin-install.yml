@@ -102,4 +102,4 @@ jobs:
         run: claude plugin marketplace list
 
       - name: Install plugin
-        run: claude plugin install agent-skills@addy-agent-skills --scope user
+        run: claude plugin install agent-skills@flutter-agent-skills --scope user

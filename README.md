@@ -31,7 +31,7 @@ This fork adapts the pack for **Flutter mobile development** (iOS and Android). 
 
 **Conventions the skills assume:** Bloc with Cubit for state, [freezed](https://pub.dev/packages/freezed) for states and models (never Equatable, with `dart run build_runner build -d` after changing them), `go_router` for navigation, and the Dart MCP server plus mobile-mcp for running and driving the app.
 
-**Using this fork:** clone `https://github.com/apetroaeiandrei/agent-skills.git` and run `claude --plugin-dir /path/to/agent-skills`. The install commands further down this README reference the upstream repository, which contains the original web versions of these skills.
+**Using this fork:** install from the Claude Code marketplace (`/plugin marketplace add apetroaeiandrei/agent-skills`, then `/plugin install agent-skills@flutter-agent-skills`) or clone it and run `claude --plugin-dir /path/to/agent-skills`. Install commands below point at this fork; the upstream repository, `addyosmani/agent-skills`, holds the original web versions of these skills.
 
 ---
 
@@ -62,16 +62,16 @@ Skills also activate automatically based on what you're doing — designing an A
 **Fastest path — any agent, one command.** The open [skills CLI](https://github.com/vercel-labs/skills) installs into 70+ agents (Claude Code, Cursor, Codex, Copilot, Cline, and more):
 
 ```bash
-npx skills add addyosmani/agent-skills            # install all 25 skills
-npx skills add addyosmani/agent-skills --list     # browse before installing
+npx skills add apetroaeiandrei/agent-skills            # install all 25 skills
+npx skills add apetroaeiandrei/agent-skills --list     # browse before installing
 ```
 
 Or grab individual skills:
 
 ```bash
-npx skills add addyosmani/agent-skills --skill code-review-and-quality   # five-axis review before merge
-npx skills add addyosmani/agent-skills --skill interview-me              # requirements interrogation, one question at a time
-npx skills add addyosmani/agent-skills --skill test-driven-development   # red-green-refactor, enforced
+npx skills add apetroaeiandrei/agent-skills --skill code-review-and-quality   # five-axis review before merge
+npx skills add apetroaeiandrei/agent-skills --skill interview-me              # requirements interrogation, one question at a time
+npx skills add apetroaeiandrei/agent-skills --skill test-driven-development   # red-green-refactor, enforced
 ```
 
 > **Installing one skill?** A per-skill `npx` install copies only
@@ -89,14 +89,14 @@ Prefer a native integration? Pick your tool below.
 **Marketplace install:**
 
 ```
-/plugin marketplace add addyosmani/agent-skills
-/plugin install agent-skills@addy-agent-skills
+/plugin marketplace add apetroaeiandrei/agent-skills
+/plugin install agent-skills@flutter-agent-skills
 ```
 
 > **SSH errors?** The marketplace clones repos via SSH. If you don't have SSH keys set up on GitHub, either [add your SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account) or use the full HTTPS URL to force HTTPS cloning during the marketplace-add step:
 > ```bash
-> /plugin marketplace add https://github.com/addyosmani/agent-skills.git
-> /plugin install agent-skills@addy-agent-skills
+> /plugin marketplace add https://github.com/apetroaeiandrei/agent-skills.git
+> /plugin install agent-skills@flutter-agent-skills
 > ```
 >
 > If `/plugin install` still fails with `git@github.com: Permission denied (publickey)` on Windows or macOS, the recommended workaround is to configure Git once to rewrite GitHub SSH URLs to HTTPS for subprocess clones:
@@ -107,7 +107,7 @@ Prefer a native integration? Pick your tool below.
 **Local / development:**
 
 ```bash
-git clone https://github.com/addyosmani/agent-skills.git
+git clone https://github.com/apetroaeiandrei/agent-skills.git
 claude --plugin-dir /path/to/agent-skills
 ```
 
@@ -128,13 +128,13 @@ Install as a native plugin for skills and subagents. In affected Antigravity CLI
 **Install from the repo:**
 
 ```bash
-agy plugin install https://github.com/addyosmani/agent-skills.git
+agy plugin install https://github.com/apetroaeiandrei/agent-skills.git
 ```
 
 **Install from a local clone:**
 
 ```bash
-git clone https://github.com/addyosmani/agent-skills.git
+git clone https://github.com/apetroaeiandrei/agent-skills.git
 agy plugin install ./agent-skills
 ```
 
@@ -148,7 +148,7 @@ Install as native skills for auto-discovery, or add to `GEMINI.md` for persisten
 **Install from the repo:**
 
 ```bash
-gemini skills install https://github.com/addyosmani/agent-skills.git --path skills
+gemini skills install https://github.com/apetroaeiandrei/agent-skills.git --path skills
 ```
 
 **Install from a local clone:**
@@ -195,7 +195,7 @@ Using the standalone `copilot` CLI? Install it as a plugin — see [docs/copilot
 Install as a native Codex plugin (Codex CLI v0.122+):
 
 ```bash
-codex plugin marketplace add addyosmani/agent-skills
+codex plugin marketplace add apetroaeiandrei/agent-skills
 codex plugin add agent-skills@agent-skills
 ```
 
@@ -209,9 +209,9 @@ The first command registers the marketplace; the second installs the plugin. Cod
 Install natively with the built-in `cmd skills` command. Command Code clones the repo, discovers every `SKILL.md`, and installs into `.commandcode/skills/`:
 
 ```bash
-cmd skills add addyosmani/agent-skills            # pick skills to install (project)
-cmd skills add addyosmani/agent-skills --global   # install for all projects (~/.commandcode/skills/)
-cmd skills add addyosmani/agent-skills -s spec-driven-development  # install a specific skill
+cmd skills add apetroaeiandrei/agent-skills            # pick skills to install (project)
+cmd skills add apetroaeiandrei/agent-skills --global   # install for all projects (~/.commandcode/skills/)
+cmd skills add apetroaeiandrei/agent-skills -s spec-driven-development  # install a specific skill
 ```
 
 Installed skills show up in the TUI slash menu, e.g. `/spec-driven-development`. See [docs/commandcode-setup.md](docs/commandcode-setup.md).
@@ -265,7 +265,7 @@ The commands above are entry points. The pack includes 25 skills total — 24 li
 | Skill | What It Does | Use When |
 |-------|-------------|----------|
 | [incremental-implementation](skills/incremental-implementation/SKILL.md) | Thin vertical slices - implement, test, verify, commit. Feature flags, safe defaults, rollback-friendly changes | Any change touching more than one file |
-| [test-driven-development](skills/test-driven-development/SKILL.md) | Red-Green-Refactor, test pyramid (80/15/5), test sizes, DAMP over DRY, Beyonce Rule, browser testing | Implementing logic, fixing bugs, or changing behavior |
+| [test-driven-development](skills/test-driven-development/SKILL.md) | Red-Green-Refactor, test pyramid (80/15/5), test sizes, DAMP over DRY, Beyonce Rule, Flutter widget and integration tests | Implementing logic, fixing bugs, or changing behavior |
 | [context-engineering](skills/context-engineering/SKILL.md) | Feed agents the right information at the right time - rules files, context packing, MCP integrations | Starting a session, switching tasks, or when output quality drops |
 | [source-driven-development](skills/source-driven-development/SKILL.md) | Ground every framework decision in official documentation - verify, cite sources, flag what's unverified | You want authoritative, source-cited code for any framework or library |
 | [doubt-driven-development](skills/doubt-driven-development/SKILL.md) | Adversarial fresh-context review of every non-trivial decision in-flight - CLAIM → EXTRACT → DOUBT → RECONCILE → STOP, with optional user-authorized cross-model escalation | Stakes are high (production, security, irreversible), working in unfamiliar code, or a confident output is cheaper to verify now than to debug later |
